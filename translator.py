@@ -1,10 +1,11 @@
 import sys
 from isa import encode, write_code, Opcode
 
-KEYWORDS = {"var", "while", "if", "else"}
+KEYWORDS = {"var", "while", "if", "else", "print", "print_num"}
 ASSIGN = {"="}
 OP = {"+", "-", "/", "%", "*", "==", "!=", "<", "<=", ">", ">="}
 SP = 7
+STR_BUF = 40
 
 class Parser:
     def __init__(self, tokens):
@@ -66,6 +67,10 @@ class Parser:
             return self.parse_while()
         elif tok_type == "IF":
             return self.parse_if()
+        elif tok_type == "PRINT":
+            return self.parse_print()
+        elif tok_type == "PRINT_NUM":
+            return self.parse_print_num()
         elif tok_type == "IDENT":
             return self.parse_assign()
         else:
@@ -117,6 +122,20 @@ class Parser:
             self.expect("RBRACE")
 
         return {"type": "If", "cond": cond, "then": then_body, "else": else_body}
+    
+    def parse_print(self):
+        self.expect("PRINT")
+        self.expect("LPAREN")
+        expr = self.parse_cmp()
+        self.expect("RPAREN")
+        return {"type": "Print", "expr": expr}
+    
+    def parse_print_num(self):
+        self.expect("PRINT_NUM")
+        self.expect("LPAREN")
+        expr = self.parse_cmp()
+        self.expect("RPAREN")
+        return {"type": "PrintNum", "expr": expr}
 
     def parse(self):
         statements = []
@@ -215,6 +234,14 @@ class CodeGen:
             for stmt in node["else"]:                  
                 self.gen_statement(stmt)
             self.place_label(end_lbl)
+        elif node["type"] == "Print":
+            self.gen_expr(node["expr"])              
+            self.pop(1)                             
+            self.emit(Opcode.OUT, rd=0, rs=1, imm=0) 
+        elif node["type"] == "PrintNum":
+            self.gen_expr(node["expr"])
+            self.pop(1)                                  
+            self.gen_print_num()
 
     def generate(self, program):
         self.emit(Opcode.LI, rd=SP, imm=32)
@@ -222,6 +249,60 @@ class CodeGen:
             self.gen_statement(stmt)
         self.emit(Opcode.HALT)
         return self.link()
+
+    def gen_print_num(self):
+        zero_skip = self.new_label("pn_zero_skip")
+        self.emit(Opcode.LI, rd=2, imm=0)
+        self.emit(Opcode.CMP, rd=1, rs=2)
+        self.emit_jump(Opcode.JNZ, zero_skip)        
+        self.emit(Opcode.LI, rd=2, imm=48)            
+        self.emit(Opcode.OUT, rd=0, rs=2, imm=0)
+        end_lbl = self.new_label("pn_end")
+        self.emit_jump(Opcode.JMP, end_lbl)
+        self.place_label(zero_skip)
+
+
+        self.emit(Opcode.LI, rd=4, imm=0)
+
+        extract_top = self.new_label("pn_ext_top")
+        extract_end = self.new_label("pn_ext_end")
+        self.place_label(extract_top)
+        self.emit(Opcode.LI, rd=2, imm=0)
+        self.emit(Opcode.CMP, rd=1, rs=2)             
+        self.emit_jump(Opcode.JZ, extract_end)
+
+        self.emit(Opcode.LI, rd=3, imm=0)
+        self.emit(Opcode.ADD, rd=3, rs=1)             
+        self.emit(Opcode.LI, rd=2, imm=10)
+        self.emit(Opcode.MOD, rd=3, rs=2)              
+        self.emit(Opcode.LI, rd=2, imm=48)
+        self.emit(Opcode.ADD, rd=3, rs=2)              
+
+        self.emit(Opcode.ST, rd=3, rs=4, imm=STR_BUF)
+
+        self.emit(Opcode.LI, rd=2, imm=1)
+        self.emit(Opcode.ADD, rd=4, rs=2)
+
+        self.emit(Opcode.LI, rd=2, imm=10)
+        self.emit(Opcode.DIV, rd=1, rs=2)
+
+        self.emit_jump(Opcode.JMP, extract_top)
+        self.place_label(extract_end)
+
+        print_top = self.new_label("pn_prn_top")
+        print_end = self.new_label("pn_prn_end")
+        self.place_label(print_top)
+        self.emit(Opcode.LI, rd=2, imm=0)
+        self.emit(Opcode.CMP, rd=4, rs=2)             
+        self.emit_jump(Opcode.JZ, print_end)
+        self.emit(Opcode.LI, rd=2, imm=1)
+        self.emit(Opcode.SUB, rd=4, rs=2)               
+        self.emit(Opcode.LD, rd=3, rs=4, imm=STR_BUF)   
+        self.emit(Opcode.OUT, rd=0, rs=3, imm=0)
+        self.emit_jump(Opcode.JMP, print_top)
+        self.place_label(print_end)
+
+        self.place_label(end_lbl)
 
     def link(self):
         linked = []
@@ -283,7 +364,11 @@ def tokenize(text):
             elif part == "if":
                 tokens.append(("IF", part))
             elif part == "else":
-                tokens.append(("ELSE", part))          
+                tokens.append(("ELSE", part)) 
+            elif part == "print":
+                tokens.append(("PRINT", part))    
+            elif part == "print_num":
+                tokens.append(("PRINT_NUM", part))     
         elif part in ASSIGN:
             tokens.append(("ASSIGN", part))
         elif part in OP:

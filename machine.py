@@ -14,6 +14,8 @@ def run(program):
     savedPc = 0
     halted = False
 
+    output_buffer = []
+
     while not halted:
         if pc >= len(program):
             raise RuntimeError(f"PC={pc} вышел за пределы программы — забыли HALT?")
@@ -85,15 +87,19 @@ def run(program):
         elif opcode == Opcode.JGE:
             if not negativeFlag:
                 pc = imm
+        elif opcode == Opcode.IN:
+            pass
+        elif opcode == Opcode.OUT:
+            output_buffer.append(registers[rs])
         elif opcode == Opcode.IRET:
             pc = savedPc
         elif opcode == Opcode.HALT:
             halted = True              
         else:
             raise ValueError(f"неизвестный опкод {opcode}")
-    print(memory[0], memory[1], memory[2], memory[3])
+    return output_buffer
 
 if __name__ == "__main__":
     program = read_code("prog.bin")
-    run(program)
-    
+    output = run(program)
+    print("Output as chars:", "".join(chr(c) if 32 <= c < 127 else f"<{c}>" for c in output))

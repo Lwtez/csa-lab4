@@ -1,5 +1,3 @@
 var a = 10
-var b = 0
-if ( a < 50 ) {
-    b = 100
-}
+var b = 20
+print_num ( a + b )
