@@ -18,7 +18,7 @@ def run(program):
         if pc >= len(program):
             raise RuntimeError(f"PC={pc} вышел за пределы программы — забыли HALT?")
         opcode, rd, rs, imm = program[pc]
-        print(f"такт {tick:2} | PC={pc} | R0={registers[0]} R1={registers[1]} R2={registers[2]} R3={registers[3]} R4={registers[4]} R5={registers[5]} R6={registers[6]} R7={registers[7]}| {opcode.name}")
+        print(f"такт {tick:2} | PC={pc} | R0={registers[0]} R1={registers[1]} R2={registers[2]} R3={registers[3]} R4={registers[4]} R5={registers[5]} R6={registers[6]} R7={registers[7]}| ZF={zeroFlag} | NF={negativeFlag} |{opcode.name}")
 
         pc = pc + 1
         tick += 1
@@ -67,17 +67,31 @@ def run(program):
         elif opcode == Opcode.JMP:
             pc = imm
 
+        elif opcode == Opcode.JZ:
+            if zeroFlag:
+                pc = imm
         elif opcode == Opcode.JNZ:
             if not zeroFlag:
                 pc = imm
-        
+        elif opcode == Opcode.JL:
+            if negativeFlag:
+                pc = imm
+        elif opcode == Opcode.JLE:
+            if negativeFlag or zeroFlag:
+                pc = imm
+        elif opcode == Opcode.JG:
+            if not negativeFlag and not zeroFlag:
+                pc = imm
+        elif opcode == Opcode.JGE:
+            if not negativeFlag:
+                pc = imm
         elif opcode == Opcode.IRET:
             pc = savedPc
         elif opcode == Opcode.HALT:
-            halted = True              # остановить цикл
+            halted = True              
         else:
             raise ValueError(f"неизвестный опкод {opcode}")
-    print(memory[0], memory[1], memory[2])
+    print(memory[0], memory[1], memory[2], memory[3])
 
 if __name__ == "__main__":
     program = read_code("prog.bin")

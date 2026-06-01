@@ -11,7 +11,12 @@ class Opcode(IntEnum):
     ST = 8
     LI = 9
     JMP = 10
+    JZ = 11
     JNZ = 12
+    JL = 13
+    JLE = 14
+    JG = 15
+    JGE = 16
     IN = 17
     OUT = 18
     HALT = 19
