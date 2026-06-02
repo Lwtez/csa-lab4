@@ -7,7 +7,7 @@ def run(program, schedule=None):
     zeroFlag = False
     negativeFlag = False
 
-    memory = [0]*64
+    memory = [0]*1024
 
     pc = 0
     tick = 0
@@ -158,4 +158,4 @@ if __name__ == "__main__":
                 schedule.append((tick, code))
     
     output = run(program, schedule=schedule)
-    print("Output as chars:", "".join(chr(c) if 32 <= c < 127 else f"<{c}>" for c in output))
+    print("".join(chr(c) if 32 <= c < 127 else f"<{c}>" for c in output))

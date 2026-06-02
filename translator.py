@@ -1,13 +1,25 @@
 import sys
 from isa import encode, write_code, Opcode
 
-KEYWORDS = {"var", "while", "if", "else", "print", "print_num", "read"}
 ASSIGN = {"="}
 OP = {"+", "-", "/", "%", "*", "==", "!=", "<", "<=", ">", ">="}
+
+KEYWORDS_TYPE = {
+    "var": "VAR",
+    "while": "WHILE",
+    "if": "IF",
+    "else": "ELSE",
+    "print": "PRINT",
+    "print_num": "PRINT_NUM",
+    "print_str": "PRINT_STR",     
+    "read": "READ",
+}
+
 SP = 7
 STR_BUF = 40
 N_CELL = 50
 READY_CELL = 51
+STR_BASE = 200
 
 class Parser:
     def __init__(self, tokens):
@@ -78,6 +90,8 @@ class Parser:
             return self.parse_print()
         elif tok_type == "PRINT_NUM":
             return self.parse_print_num()
+        elif tok_type == "PRINT_STR":
+            return self.parse_print_str()
         elif tok_type == "IDENT":
             return self.parse_assign()
         else:
@@ -143,6 +157,16 @@ class Parser:
         expr = self.parse_cmp()
         self.expect("RPAREN")
         return {"type": "PrintNum", "expr": expr}
+    
+    def parse_print_str(self):
+        self.pos += 1                   
+        self.expect("LPAREN")
+        tok_type, value = self.tokens[self.pos]
+        if tok_type != "STRING":
+            raise SyntaxError(f"ожидалась строка, получено {tok_type}")
+        self.pos += 1                            
+        self.expect("RPAREN")
+        return {"type": "PrintStr", "value": value}
 
     def parse(self):
         statements = []
@@ -157,6 +181,7 @@ class CodeGen:
         self.next_addr = 0
         self.labels = {}
         self.label_counter = 0
+        self.next_str_addr = 200
 
     def new_label(self, base):
         self.label_counter += 1
@@ -268,6 +293,39 @@ class CodeGen:
             self.gen_expr(node["expr"])
             self.pop(1)                                  
             self.gen_print_num()
+        elif node["type"] == "PrintStr":
+            s = node["value"]
+            length = len(s)
+            base = self.next_str_addr
+            self.next_str_addr += length + 1 
+
+            self.emit(Opcode.LI, rd=1, imm=length)
+            self.emit(Opcode.ST, rd=1, rs=0, imm=base)
+
+            for i, ch in enumerate(s):
+                self.emit(Opcode.LI, rd=1, imm=ord(ch))
+                self.emit(Opcode.ST, rd=1, rs=0, imm=base + 1 + i)
+
+            self.emit(Opcode.LI, rd=4, imm=0)
+    
+            self.emit(Opcode.LD, rd=5, rs=0, imm=base)
+
+            loop_top = self.new_label("strp_top")
+            loop_end = self.new_label("strp_end")
+            self.place_label(loop_top)
+
+            self.emit(Opcode.CMP, rd=4, rs=5)
+            self.emit_jump(Opcode.JGE, loop_end)
+
+            self.emit(Opcode.LD, rd=3, rs=4, imm=base + 1)
+
+            self.emit(Opcode.OUT, rd=0, rs=3, imm=0)
+
+            self.emit(Opcode.LI, rd=2, imm=1)
+            self.emit(Opcode.ADD, rd=4, rs=2)
+            self.emit_jump(Opcode.JMP, loop_top)
+
+            self.place_label(loop_end)
 
     def generate(self, program):
         self.emit_jump(Opcode.JMP, "__main__")
@@ -407,43 +465,69 @@ class CodeGen:
         self.place_label(end_lbl)
 
 def tokenize(text):
-    tokens = []                      
-    parts = text.split()
-
-    for part in parts:
-        if part in KEYWORDS:
-            if part == "var":
-                tokens.append(("VAR", part)) 
-            elif part == "while":
-                tokens.append(("WHILE", part))
-            elif part == "if":
-                tokens.append(("IF", part))
-            elif part == "else":
-                tokens.append(("ELSE", part)) 
-            elif part == "print":
-                tokens.append(("PRINT", part))    
-            elif part == "print_num":
-                tokens.append(("PRINT_NUM", part))
-            elif part == "read":
-                tokens.append(("READ", part))    
-        elif part in ASSIGN:
-            tokens.append(("ASSIGN", part))
-        elif part in OP:
-            tokens.append(("OP", part))
-        elif part.isdigit():
-            tokens.append(("NUMBER", int(part)))
-        elif part == "(":
-            tokens.append(("LPAREN", part))
-        elif part == ")":
-            tokens.append(("RPAREN", part))
-        elif part == "{":
-            tokens.append(("LBRACE", part))
-        elif part == "}":
-            tokens.append(("RBRACE", part))
-        else:
-            tokens.append(("IDENT", part))
-
-    return tokens 
+    tokens = []
+    pos = 0
+    while pos < len(text):
+        ch = text[pos]
+        
+        if ch in " \t\n\r":
+            pos += 1
+            continue
+        
+        if ch == '"':
+            pos += 1                         
+            start = pos
+            while pos < len(text) and text[pos] != '"':
+                pos += 1
+            if pos >= len(text):
+                raise SyntaxError("незакрытая строка")
+            value = text[start:pos]
+            pos += 1                         
+            tokens.append(("STRING", value))
+            continue
+        
+        if ch.isdigit():
+            start = pos
+            while pos < len(text) and text[pos].isdigit():
+                pos += 1
+            tokens.append(("NUMBER", int(text[start:pos])))
+            continue
+        
+        if ch.isalpha() or ch == "_":
+            start = pos
+            while pos < len(text) and (text[pos].isalnum() or text[pos] == "_"):
+                pos += 1
+            word = text[start:pos]
+            if word in KEYWORDS_TYPE:
+                tokens.append((KEYWORDS_TYPE[word], word))    
+            else:
+                tokens.append(("IDENT", word))
+            continue
+        
+        if pos + 1 < len(text) and text[pos:pos+2] in ("==", "!=", "<=", ">="):
+            tokens.append(("OP", text[pos:pos+2]))
+            pos += 2
+            continue
+        
+        if ch in "+-*/%<>":
+            tokens.append(("OP", ch))
+            pos += 1
+            continue
+        if ch == "=":
+            tokens.append(("ASSIGN", "="))
+            pos += 1
+            continue
+        if ch == "(":
+            tokens.append(("LPAREN", ch)); pos += 1; continue
+        if ch == ")":
+            tokens.append(("RPAREN", ch)); pos += 1; continue
+        if ch == "{":
+            tokens.append(("LBRACE", ch)); pos += 1; continue
+        if ch == "}":
+            tokens.append(("RBRACE", ch)); pos += 1; continue
+        
+        raise SyntaxError(f"непонятный символ: {ch!r}")
+    return tokens
 
 def parse(tokens):
     return Parser(tokens).parse()
