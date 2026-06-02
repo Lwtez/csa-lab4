@@ -1,2 +1,1 @@
-var n = read()
-print_num (n)
+print_str ("HELLO MY BRO")

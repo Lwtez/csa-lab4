@@ -179,6 +179,7 @@ class CodeGen:
         self.labels = {}                # имя -> байтовый адрес
         self.label_counter = 0
         self.next_str_addr = STR_BASE   # байтовый адрес следующей строки
+        self.data_section = {}          # байтовый адрес -> bytes (статические данные)
 
     # --- инфраструктура ---
     def new_label(self, base):
@@ -393,32 +394,32 @@ class CodeGen:
 
         self.place_label(end_lbl)
 
-    # --- print_str: пока инициализируем строку рантаймом по адресу STR_BASE+...
-    # (превращение в статические данные в секции данных — пункт 3 плана) ---
+    # --- print_str: строка лежит в секции данных (pstr: [length, ch, ch, ...]) ---
     def gen_print_str(self, s):
         length = len(s)
         base = self.next_str_addr
         self.next_str_addr += (length + 1) * WORD_SIZE
 
-        # инициализация: длина + символы (length-prefixed, pstr)
-        self.emit(Opcode.LI, rd=1, imm=length)
-        self.emit(Opcode.ST, rd=1, rs=0, imm=base)
+        # === статика: пишем в секцию данных, БЕЗ инициализирующих инструкций ===
+        # длина (1 слово), затем по слову на символ — это и есть pstr
+        self.data_section[base] = length.to_bytes(WORD_SIZE, "little", signed=False)
         for i, ch in enumerate(s):
-            self.emit(Opcode.LI, rd=1, imm=ord(ch))
-            self.emit(Opcode.ST, rd=1, rs=0, imm=base + (i + 1) * WORD_SIZE)
+            self.data_section[base + (i + 1) * WORD_SIZE] = \
+                ord(ch).to_bytes(WORD_SIZE, "little", signed=False)
 
-        # цикл вывода: r4 — байтовый счётчик (0..length*4), r5 — длина в байтах
+        # === код: только цикл вывода ===
+        # r4 — байтовый счётчик (0, 4, 8, ...), r5 — длина в байтах
         self.emit(Opcode.LI, rd=4, imm=0)
-        self.emit(Opcode.LD, rd=5, rs=0, imm=base)             # r5 = length (в символах)
+        self.emit(Opcode.LD, rd=5, rs=0, imm=base)              # r5 = length (в символах)
         self.emit(Opcode.LI, rd=2, imm=WORD_SIZE)
-        self.emit(Opcode.MUL, rd=5, rs=2)                       # r5 = length * 4 (в байтах)
+        self.emit(Opcode.MUL, rd=5, rs=2)                        # r5 = length * 4 (в байтах)
 
         loop_top = self.new_label("strp_top")
         loop_end = self.new_label("strp_end")
         self.place_label(loop_top)
         self.emit(Opcode.CMP, rd=4, rs=5)
         self.emit_jump(Opcode.JGE, loop_end)
-        self.emit(Opcode.LD, rd=3, rs=4, imm=base + WORD_SIZE)  # символ по адресу r4 + base+4
+        self.emit(Opcode.LD, rd=3, rs=4, imm=base + WORD_SIZE)   # символ по r4 + (base+4)
         self.emit(Opcode.OUT, rd=0, rs=3, imm=PORT_STDOUT)
         self.emit(Opcode.LI, rd=2, imm=WORD_SIZE)
         self.emit(Opcode.ADD, rd=4, rs=2)
@@ -537,6 +538,33 @@ def parse(tokens):
 #                       ENTRY POINT
 # ============================================================
 
+def write_listing_full(filename, code, data_section, start_addr=0):
+    """Расширенный листинг: секция кода + секция данных."""
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write("== CODE ==\n")
+        for i, (opcode, rd, rs, imm) in enumerate(code):
+            raw = encode(opcode, rd, rs, imm)
+            addr = start_addr + i * INSTR_SIZE
+            f.write(f"{addr:04X} - {raw.hex().upper()} - {_mnemonic(opcode, rd, rs, imm)}\n")
+        if data_section:
+            f.write("\n== DATA ==\n")
+            for addr in sorted(data_section.keys()):
+                blob = data_section[addr]
+                if len(blob) == WORD_SIZE:
+                    val = int.from_bytes(blob, "little", signed=False)
+                    if 32 <= val < 127:
+                        descr = f".word {val}  ; '{chr(val)}'"
+                    else:
+                        descr = f".word {val}"
+                else:
+                    descr = f".bytes len={len(blob)}"
+                f.write(f"{addr:04X} - {blob.hex().upper()} - {descr}\n")
+
+
+# мнемонику тащим из isa, но в listing_full нужно её локально вызывать
+from isa import mnemonic as _mnemonic
+
+
 def translate_file(source_path, output_path):
     with open(source_path, "r", encoding="utf-8") as f:
         text = f.read()
@@ -545,15 +573,35 @@ def translate_file(source_path, output_path):
 
     cg = CodeGen()
     code = cg.generate(tree)
+    data = cg.data_section
 
-    # бинарь: образ памяти, начиная с адреса 0
-    write_code(output_path, code)
-    # листинг рядом: <addr> - <HEX> - <mnemonic>
+    # === собираем образ памяти ===
+    code_size = len(code) * INSTR_SIZE
+    if data:
+        max_data_end = max(addr + len(blob) for addr, blob in data.items())
+        image_size = max(code_size, max_data_end)
+    else:
+        image_size = code_size
+
+    image = bytearray(image_size)
+    # код в начале (с адреса 0)
+    for i, (opcode, rd, rs, imm) in enumerate(code):
+        image[i * INSTR_SIZE:(i + 1) * INSTR_SIZE] = encode(opcode, rd, rs, imm)
+    # статические данные на своих байтовых адресах
+    for addr, blob in data.items():
+        image[addr:addr + len(blob)] = blob
+
+    with open(output_path, "wb") as f:
+        f.write(image)
+
     listing_path = os.path.splitext(output_path)[0] + ".lst"
-    write_listing(listing_path, code, start_addr=0)
+    write_listing_full(listing_path, code, data, start_addr=0)
 
-    print(f"OK: {source_path} -> {output_path} ({len(code)} инструкций, "
-          f"{len(code)*INSTR_SIZE} байт), листинг: {listing_path}")
+    data_bytes = sum(len(b) for b in data.values())
+    print(f"OK: {source_path} -> {output_path}  "
+          f"(код: {len(code)} инструкций / {code_size} B, "
+          f"данные: {data_bytes} B, образ: {image_size} B), "
+          f"листинг: {listing_path}")
 
 
 if __name__ == "__main__":
