@@ -1,11 +1,13 @@
 import sys
 from isa import encode, write_code, Opcode
 
-KEYWORDS = {"var", "while", "if", "else", "print", "print_num"}
+KEYWORDS = {"var", "while", "if", "else", "print", "print_num", "read"}
 ASSIGN = {"="}
 OP = {"+", "-", "/", "%", "*", "==", "!=", "<", "<=", ">", ">="}
 SP = 7
 STR_BUF = 40
+N_CELL = 50
+READY_CELL = 51
 
 class Parser:
     def __init__(self, tokens):
@@ -27,6 +29,11 @@ class Parser:
         elif tok_type == "IDENT":
             self.pos += 1
             return {"type": "Var", "name": tok_value}
+        elif tok_type == "READ":
+            self.pos += 1 
+            self.expect("LPAREN")
+            self.expect("RPAREN")
+            return {"type": "Read"}
         else:
             raise SyntaxError(f"ожидалось число или имя, а тут {tok_type}")
     
@@ -189,6 +196,25 @@ class CodeGen:
             self.gen_binop(node["op"])         
             self.push(1)                       
 
+        elif node["type"] == "Read":
+            self.emit(Opcode.LI, rd=1, imm=0)
+            self.emit(Opcode.ST, rd=1, rs=0, imm=N_CELL)
+            self.emit(Opcode.ST, rd=1, rs=0, imm=READY_CELL)
+            
+            self.emit(Opcode.EI, rd=0, rs=0, imm=0)
+            
+            wait_top = self.new_label("read_wait")
+            self.place_label(wait_top)
+            self.emit(Opcode.LD, rd=1, rs=0, imm=READY_CELL)
+            self.emit(Opcode.LI, rd=2, imm=0)
+            self.emit(Opcode.CMP, rd=1, rs=2)
+            self.emit_jump(Opcode.JZ, wait_top)
+            
+            self.emit(Opcode.DI, rd=0, rs=0, imm=0)
+            self.emit(Opcode.LD, rd=1, rs=0, imm=N_CELL)
+            
+            self.push(1)
+
         else:
             raise ValueError(f"не умею вычислять {node['type']}")
 
@@ -244,6 +270,9 @@ class CodeGen:
             self.gen_print_num()
 
     def generate(self, program):
+        self.emit_jump(Opcode.JMP, "__main__")
+        self.gen_isr()
+        self.place_label("__main__")
         self.emit(Opcode.LI, rd=SP, imm=32)
         for stmt in program["body"]:
             self.gen_statement(stmt)
@@ -303,6 +332,32 @@ class CodeGen:
         self.place_label(print_end)
 
         self.place_label(end_lbl)
+
+    def gen_isr(self):
+        is_newline = self.new_label("isr_nl")
+        isr_ret = self.new_label("isr_ret")
+        
+        self.emit(Opcode.IN, rd=6, rs=0, imm=0)
+        
+        self.emit(Opcode.LI, rd=5, imm=10)
+        self.emit(Opcode.CMP, rd=6, rs=5)
+        self.emit_jump(Opcode.JZ, is_newline)
+        
+        self.emit(Opcode.LI, rd=5, imm=48)
+        self.emit(Opcode.SUB, rd=6, rs=5)      
+        self.emit(Opcode.LD, rd=5, rs=0, imm=N_CELL)   
+        self.emit(Opcode.LI, rd=4, imm=10)
+        self.emit(Opcode.MUL, rd=5, rs=4)       
+        self.emit(Opcode.ADD, rd=5, rs=6)        
+        self.emit(Opcode.ST, rd=5, rs=0, imm=N_CELL)
+        self.emit_jump(Opcode.JMP, isr_ret)
+        
+        self.place_label(is_newline)
+        self.emit(Opcode.LI, rd=5, imm=1)
+        self.emit(Opcode.ST, rd=5, rs=0, imm=READY_CELL)
+        
+        self.place_label(isr_ret)
+        self.emit(Opcode.IRET)
 
     def link(self):
         linked = []
@@ -368,7 +423,9 @@ def tokenize(text):
             elif part == "print":
                 tokens.append(("PRINT", part))    
             elif part == "print_num":
-                tokens.append(("PRINT_NUM", part))     
+                tokens.append(("PRINT_NUM", part))
+            elif part == "read":
+                tokens.append(("READ", part))    
         elif part in ASSIGN:
             tokens.append(("ASSIGN", part))
         elif part in OP:

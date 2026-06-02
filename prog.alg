@@ -1,3 +1,2 @@
-var a = 10
-var b = 20
-print_num ( a + b )
+var n = read ( )
+print_num ( n )

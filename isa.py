@@ -21,6 +21,8 @@ class Opcode(IntEnum):
     OUT = 18
     HALT = 19
     IRET = 20
+    EI = 21
+    DI = 22
 
 def encode(opcode, rd, rs, imm):
     if not -32768 <= imm <= 32767:
