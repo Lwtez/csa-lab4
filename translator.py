@@ -29,6 +29,10 @@ STACK_INIT  = 0x1800     # начало стека (растёт вверх)
 
 SP = 7   # R7 — указатель стека
 
+# ---------- port-mapped I/O ----------
+PORT_STDIN  = 0      # клавиатура (символ доставляется по прерыванию)
+PORT_STDOUT = 1      # символьный вывод
+
 
 # ============================================================
 #                          PARSER
@@ -318,7 +322,7 @@ class CodeGen:
         elif t == "Print":
             self.gen_expr(node["expr"])
             self.pop(1)
-            self.emit(Opcode.OUT, rd=0, rs=1, imm=0)
+            self.emit(Opcode.OUT, rd=0, rs=1, imm=PORT_STDOUT)
 
         elif t == "PrintNum":
             self.gen_expr(node["expr"])
@@ -338,7 +342,7 @@ class CodeGen:
         self.emit_jump(Opcode.JNZ, zero_skip)
         # n == 0 → выводим '0'
         self.emit(Opcode.LI, rd=2, imm=48)
-        self.emit(Opcode.OUT, rd=0, rs=2, imm=0)
+        self.emit(Opcode.OUT, rd=0, rs=2, imm=PORT_STDOUT)
         self.emit_jump(Opcode.JMP, end_lbl)
 
         # извлечение цифр в STR_BUF, r4 — байтовое смещение
@@ -383,7 +387,7 @@ class CodeGen:
         self.emit(Opcode.LI, rd=2, imm=WORD_SIZE)
         self.emit(Opcode.SUB, rd=4, rs=2)
         self.emit(Opcode.LD, rd=3, rs=4, imm=STR_BUF)
-        self.emit(Opcode.OUT, rd=0, rs=3, imm=0)
+        self.emit(Opcode.OUT, rd=0, rs=3, imm=PORT_STDOUT)
         self.emit_jump(Opcode.JMP, print_top)
         self.place_label(print_end)
 
@@ -415,7 +419,7 @@ class CodeGen:
         self.emit(Opcode.CMP, rd=4, rs=5)
         self.emit_jump(Opcode.JGE, loop_end)
         self.emit(Opcode.LD, rd=3, rs=4, imm=base + WORD_SIZE)  # символ по адресу r4 + base+4
-        self.emit(Opcode.OUT, rd=0, rs=3, imm=0)
+        self.emit(Opcode.OUT, rd=0, rs=3, imm=PORT_STDOUT)
         self.emit(Opcode.LI, rd=2, imm=WORD_SIZE)
         self.emit(Opcode.ADD, rd=4, rs=2)
         self.emit_jump(Opcode.JMP, loop_top)
@@ -426,7 +430,7 @@ class CodeGen:
         is_newline = self.new_label("isr_nl")
         isr_ret    = self.new_label("isr_ret")
 
-        self.emit(Opcode.IN, rd=6, rs=0, imm=0)         # символ -> r6
+        self.emit(Opcode.IN, rd=6, rs=0, imm=PORT_STDIN)         # символ -> r6
         self.emit(Opcode.LI, rd=5, imm=10)
         self.emit(Opcode.CMP, rd=6, rs=5)
         self.emit_jump(Opcode.JZ, is_newline)

@@ -1,1 +1,2 @@
-print_str ( "Hello, world!" )
+var n = read()
+print_num (n)

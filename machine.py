@@ -7,6 +7,33 @@ TICK_LIMIT = 200_000_000
 # код ISR транслятор кладёт начиная с адреса 4.
 INTERRUPT_VECTOR = INSTR_SIZE   # = 0x04
 
+# ====== I/O: port-mapped =========================================
+# Порты независимы от памяти. Адресуются полем imm инструкций IN/OUT.
+# Port 0 — клавиатура (вход): данные приезжают по прерыванию.
+# Port 1 — символьный вывод: запись добавляет байт в выходной буфер.
+# Остальные порты зарезервированы; чтение/запись в них тихо игнорируются.
+
+PORT_STDIN  = 0
+PORT_STDOUT = 1
+
+
+class IOController:
+    def __init__(self):
+        self.in_data = {PORT_STDIN: 0}   # port_num -> регистр данных входа
+        self.out_buf = []                # выходной буфер символов
+
+    def in_port(self, port_num):
+        return self.in_data.get(port_num, 0)
+
+    def out_port(self, port_num, value):
+        if port_num == PORT_STDOUT:
+            self.out_buf.append(value & 0xFF)
+        # для остальных портов — пока no-op
+
+    def deliver_input(self, port_num, value):
+        """Снаружи (модель/расписание прерываний) кладёт байт в регистр данных порта."""
+        self.in_data[port_num] = value
+
 
 def _read_word(memory, addr):
     return int.from_bytes(memory[addr:addr+4], "little", signed=True)
@@ -39,9 +66,7 @@ def run(image_bytes, schedule=None, verbose=True):
 
     interrupt_enabled = False
     in_interrupt = False
-    input_port = 0
-
-    output_buffer = []
+    io = IOController()
 
     # --- конвейерное состояние (FETCH / EXEC) ---
     stage = "FETCH"
@@ -66,12 +91,12 @@ def run(image_bytes, schedule=None, verbose=True):
                 sched_tick, sched_char = schedule[0]
                 if tick >= sched_tick:
                     schedule.pop(0)
-                    input_port = sched_char
+                    io.deliver_input(PORT_STDIN, sched_char)
                     saved_pc = pc
                     in_interrupt = True
                     interrupt_enabled = False
                     pc = INTERRUPT_VECTOR
-                    log("TRAP ", f"--> ISR, saved_pc=0x{saved_pc:04X}, vector=0x{INTERRUPT_VECTOR:04X}, port=0x{input_port:02X}")
+                    log("TRAP ", f"--> ISR, saved_pc=0x{saved_pc:04X}, vector=0x{INTERRUPT_VECTOR:04X}, port{PORT_STDIN}<=0x{sched_char:02X}")
                     tick += 1
                     continue
 
@@ -140,10 +165,10 @@ def run(image_bytes, schedule=None, verbose=True):
             if not neg_flag: pc = imm
 
         elif opcode == Opcode.IN:
-            # пока порт один (input_port). Поле imm — номер порта — обработаем на шаге 2.
-            registers[rd] = input_port
+            # imm — номер порта
+            registers[rd] = io.in_port(imm)
         elif opcode == Opcode.OUT:
-            output_buffer.append(registers[rs])
+            io.out_port(imm, registers[rs])
 
         elif opcode == Opcode.EI:
             interrupt_enabled = True
@@ -165,7 +190,7 @@ def run(image_bytes, schedule=None, verbose=True):
     if tick >= TICK_LIMIT:
         print(f"!!! достигнут лимит {TICK_LIMIT} тактов — программа зависла")
 
-    return output_buffer
+    return io.out_buf
 
 
 if __name__ == "__main__":
