@@ -1,161 +1,204 @@
-from isa import decode, read_code, Opcode
+from isa import decode, read_image, Opcode, INSTR_SIZE
 
-def run(program, schedule=None):
+MEM_SIZE = 8192          # размер единой памяти в байтах
+TICK_LIMIT = 200_000_000
+
+# Вектор прерывания: первое слово (адрес 0) занято JMP main,
+# код ISR транслятор кладёт начиная с адреса 4.
+INTERRUPT_VECTOR = INSTR_SIZE   # = 0x04
+
+
+def _read_word(memory, addr):
+    return int.from_bytes(memory[addr:addr+4], "little", signed=True)
+
+
+def _write_word(memory, addr, value):
+    memory[addr:addr+4] = (value & 0xFFFFFFFF).to_bytes(4, "little", signed=False)
+
+
+def run(image_bytes, schedule=None, verbose=True):
+    """Запускает образ памяти `image_bytes`. Возвращает буфер вывода."""
     schedule = list(schedule) if schedule else []
-    registers = [0]*8
 
-    zeroFlag = False
-    negativeFlag = False
+    # --- регистровый файл + флаги ---
+    registers = [0] * 8
+    zero_flag = False
+    neg_flag = False
 
-    memory = [0]*1024
+    # --- единая память (neum) ---
+    memory = bytearray(MEM_SIZE)
+    if len(image_bytes) > MEM_SIZE:
+        raise RuntimeError(f"образ {len(image_bytes)} байт не помещается в память {MEM_SIZE}")
+    memory[:len(image_bytes)] = image_bytes
 
+    # --- состояние процессора ---
     pc = 0
-    tick = 0
-    savedPc = 0
+    saved_pc = 0
     halted = False
+    tick = 0
+
+    interrupt_enabled = False
+    in_interrupt = False
+    input_port = 0
 
     output_buffer = []
 
-    interrupt_enabled = False
-    in_interrupt = False 
-    input_port = 0
-    INTERRUPT_VECTOR = 1
+    # --- конвейерное состояние (FETCH / EXEC) ---
+    stage = "FETCH"
+    ir = None        # decoded instruction в IR
+    ir_pc = 0        # PC инструкции, лежащей сейчас в IR (для лога)
+    ir_word = 0      # сырой 32-бит код инструкции (для лога)
 
-    while not halted and tick < 200_000_000:
+    def state_label():
+        if halted:
+            return "STOP"
+        return "INT " if in_interrupt else "RUN "
 
-        if interrupt_enabled and not in_interrupt and schedule:
-            sched_tick, sched_char = schedule[0]
-            if tick >= sched_tick:
-                schedule.pop(0)
-                input_port = sched_char 
-                savedPc = pc
-                in_interrupt = True
-                interrupt_enabled = False
-                pc = INTERRUPT_VECTOR
-                #print(f"такт {tick:2} | INT | === вход в прерывание, saved_pc={savedPc} ===")
-                tick += 1
-                continue
+    def log(stage_name, msg):
+        if verbose:
+            print(f"tick {tick:5} | {state_label()} | {stage_name:5} | {msg}")
 
-        if pc >= len(program):
-            raise RuntimeError(f"PC={pc} вышел за пределы программы — забыли HALT?")
-        opcode, rd, rs, imm = program[pc]
-        mark = "INT" if in_interrupt else "   "
-        print(f"такт {tick:2} | {mark} | PC={pc} | R0={registers[0]} R1={registers[1]} R2={registers[2]} R3={registers[3]} R4={registers[4]} R5={registers[5]} R6={registers[6]} R7={registers[7]}| ZF={zeroFlag} | NF={negativeFlag} |{opcode.name}")
+    while not halted and tick < TICK_LIMIT:
 
-        pc = pc + 1
-        tick += 1
+        if stage == "FETCH":
+            # === проверка прерывания — только на границе инструкций ===
+            if interrupt_enabled and not in_interrupt and schedule:
+                sched_tick, sched_char = schedule[0]
+                if tick >= sched_tick:
+                    schedule.pop(0)
+                    input_port = sched_char
+                    saved_pc = pc
+                    in_interrupt = True
+                    interrupt_enabled = False
+                    pc = INTERRUPT_VECTOR
+                    log("TRAP ", f"--> ISR, saved_pc=0x{saved_pc:04X}, vector=0x{INTERRUPT_VECTOR:04X}, port=0x{input_port:02X}")
+                    tick += 1
+                    continue
+
+            # === FETCH: читаем 4 байта из памяти, декодируем, PC += 4 ===
+            if pc + INSTR_SIZE > MEM_SIZE:
+                raise RuntimeError(f"PC=0x{pc:04X} вышел за пределы памяти")
+            word_bytes = bytes(memory[pc:pc+INSTR_SIZE])
+            ir = decode(word_bytes)
+            ir_pc = pc
+            ir_word = int.from_bytes(word_bytes, "big")
+            opcode, rd, rs, imm = ir
+            log("FETCH", f"PC=0x{ir_pc:04X} IR=0x{ir_word:08X} ({opcode.name})")
+            pc += INSTR_SIZE
+            tick += 1
+            stage = "EXEC"
+            continue
+
+        # === EXEC ===
+        opcode, rd, rs, imm = ir
+        regs_str = " ".join(f"R{i}={registers[i]}" for i in range(8))
+        log("EXEC ",
+            f"PC=0x{ir_pc:04X} | {regs_str} | ZF={int(zero_flag)} NF={int(neg_flag)} | {opcode.name}")
 
         if opcode == Opcode.ADD:
             registers[rd] = registers[rd] + registers[rs]
-            zeroFlag = (registers[rd] == 0)
-            negativeFlag = (registers[rd] < 0)
-
+            zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
         elif opcode == Opcode.SUB:
             registers[rd] = registers[rd] - registers[rs]
-            zeroFlag = (registers[rd] == 0)
-            negativeFlag = (registers[rd] < 0)
-
+            zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
         elif opcode == Opcode.MUL:
             registers[rd] = registers[rd] * registers[rs]
-            zeroFlag = (registers[rd] == 0)
-            negativeFlag = (registers[rd] < 0)
-
+            zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
         elif opcode == Opcode.DIV:
             registers[rd] = registers[rd] // registers[rs]
-            zeroFlag = (registers[rd] == 0)
-            negativeFlag = (registers[rd] < 0)
-
+            zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
         elif opcode == Opcode.MOD:
             registers[rd] = registers[rd] % registers[rs]
-            zeroFlag = (registers[rd] == 0)
-            negativeFlag = (registers[rd] < 0)
-
+            zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
         elif opcode == Opcode.CMP:
             result = registers[rd] - registers[rs]
-            zeroFlag = (result == 0)
-            negativeFlag = (result < 0)
+            zero_flag = (result == 0); neg_flag = (result < 0)
 
         elif opcode == Opcode.LD:
             addr = registers[rs] + imm
-            registers[rd] = memory[addr]
-
+            registers[rd] = _read_word(memory, addr)
         elif opcode == Opcode.ST:
             addr = registers[rs] + imm
-            memory[addr] = registers[rd]
+            _write_word(memory, addr, registers[rd])
 
         elif opcode == Opcode.LI:
             registers[rd] = imm
 
         elif opcode == Opcode.JMP:
             pc = imm
-
         elif opcode == Opcode.JZ:
-            if zeroFlag:
-                pc = imm
+            if zero_flag: pc = imm
         elif opcode == Opcode.JNZ:
-            if not zeroFlag:
-                pc = imm
+            if not zero_flag: pc = imm
         elif opcode == Opcode.JL:
-            if negativeFlag:
-                pc = imm
+            if neg_flag: pc = imm
         elif opcode == Opcode.JLE:
-            if negativeFlag or zeroFlag:
-                pc = imm
+            if neg_flag or zero_flag: pc = imm
         elif opcode == Opcode.JG:
-            if not negativeFlag and not zeroFlag:
-                pc = imm
+            if not neg_flag and not zero_flag: pc = imm
         elif opcode == Opcode.JGE:
-            if not negativeFlag:
-                pc = imm
+            if not neg_flag: pc = imm
+
         elif opcode == Opcode.IN:
+            # пока порт один (input_port). Поле imm — номер порта — обработаем на шаге 2.
             registers[rd] = input_port
         elif opcode == Opcode.OUT:
             output_buffer.append(registers[rs])
+
         elif opcode == Opcode.EI:
             interrupt_enabled = True
         elif opcode == Opcode.DI:
             interrupt_enabled = False
         elif opcode == Opcode.IRET:
-            pc = savedPc
+            pc = saved_pc
             in_interrupt = False
             interrupt_enabled = True
+
         elif opcode == Opcode.HALT:
-            halted = True              
+            halted = True
         else:
             raise ValueError(f"неизвестный опкод {opcode}")
-    if tick >= 200_000_000:
-        print("!!! достигнут лимит тактов, программа зависла !!!")
+
+        tick += 1
+        stage = "FETCH"
+
+    if tick >= TICK_LIMIT:
+        print(f"!!! достигнут лимит {TICK_LIMIT} тактов — программа зависла")
+
     return output_buffer
+
 
 if __name__ == "__main__":
     import sys
-    from isa import read_code
-    
+
     if len(sys.argv) < 2:
-        print("Usage: python machine.py <bin_file> [input_file]")
+        print("Usage: python machine.py <bin_file> [input_file] [--quiet]")
         sys.exit(1)
-    
-    bin_file = sys.argv[1]
-    program = read_code(bin_file)
-    
+
+    quiet = "--quiet" in sys.argv
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+
+    bin_file = args[0]
+    image = read_image(bin_file)
+
     schedule = []
-    if len(sys.argv) > 2:
-        input_file = sys.argv[2]
+    if len(args) > 1:
+        input_file = args[1]
         with open(input_file, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith("#"):
                     continue
                 parts = line.split(maxsplit=1)
-                tick = int(parts[0])
+                t = int(parts[0])
                 char = parts[1]
                 if char == "\\n":
                     code = 10
                 elif char.isdigit() and len(char) > 1:
-                    code = int(char)        
+                    code = int(char)
                 else:
-                    code = ord(char[0])    
-                schedule.append((tick, code))
-    
-    output = run(program, schedule=schedule)
-    print("".join(chr(c) if 32 <= c < 127 else f"<{c}>" for c in output))
+                    code = ord(char[0])
+                schedule.append((t, code))
+
+    output = run(image, schedule=schedule, verbose=not quiet)
+    print("OUTPUT:", "".join(chr(c) if 32 <= c < 127 else f"<{c}>" for c in output))
