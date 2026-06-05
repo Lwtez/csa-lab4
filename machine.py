@@ -1,4 +1,4 @@
-from isa import decode, read_image, Opcode, INSTR_SIZE
+from isa import decode, read_image, Opcode, INSTR_SIZE, mnemonic
 
 MEM_SIZE = 8192          # размер единой памяти в байтах
 TICK_LIMIT = 200_000_000
@@ -6,6 +6,18 @@ TICK_LIMIT = 200_000_000
 # Вектор прерывания: первое слово (адрес 0) занято JMP main,
 # код ISR транслятор кладёт начиная с адреса 4.
 INTERRUPT_VECTOR = INSTR_SIZE   # = 0x04
+
+# ====== состояния процессора (как у референсных реализаций) ======
+STATE_STOP = "STOP"
+STATE_RUN  = "RUN "
+STATE_INT  = "INT "
+
+# ====== фазы такта ===============================================
+# В нашей модели ровно две фазы — FETCH и EXEC, плюс отдельная микрооперация
+# TRAP, которая занимает 1 такт при входе в прерывание.
+PHASE_FETCH = "FETCH"
+PHASE_EXEC  = "EXEC "
+PHASE_TRAP  = "TRAP "
 
 # ====== I/O: port-mapped =========================================
 # Порты независимы от памяти. Адресуются полем imm инструкций IN/OUT.
@@ -35,16 +47,15 @@ class IOController:
         self.in_data[port_num] = value
 
 
-def _read_word(memory, addr):
-    return int.from_bytes(memory[addr:addr+4], "little", signed=True)
+def run(image_bytes, schedule=None, verbose=True, log_stream=None):
+    """Запускает образ памяти `image_bytes`. Возвращает буфер вывода.
 
-
-def _write_word(memory, addr, value):
-    memory[addr:addr+4] = (value & 0xFFFFFFFF).to_bytes(4, "little", signed=False)
-
-
-def run(image_bytes, schedule=None, verbose=True):
-    """Запускает образ памяти `image_bytes`. Возвращает буфер вывода."""
+    verbose=True   — печатать журнал каждого такта (FETCH/EXEC/TRAP)
+    log_stream     — куда писать журнал (по умолчанию stdout)
+    """
+    import sys
+    if log_stream is None:
+        log_stream = sys.stdout
     schedule = list(schedule) if schedule else []
 
     # --- регистровый файл + флаги ---
@@ -63,29 +74,40 @@ def run(image_bytes, schedule=None, verbose=True):
     saved_pc = 0
     halted = False
     tick = 0
+    instr_count = 0     # сколько инструкций реально дошло до EXEC
+    trap_count = 0      # сколько раз вошли в ISR
 
     interrupt_enabled = False
     in_interrupt = False
     io = IOController()
 
-    # --- конвейерное состояние (FETCH / EXEC) ---
-    stage = "FETCH"
-    ir = None        # decoded instruction в IR
-    ir_pc = 0        # PC инструкции, лежащей сейчас в IR (для лога)
-    ir_word = 0      # сырой 32-бит код инструкции (для лога)
+    # --- конвейерное состояние ---
+    stage = PHASE_FETCH
+    ir = None
+    ir_pc = 0
+    ir_word = 0
 
-    def state_label():
-        if halted:
-            return "STOP"
-        return "INT " if in_interrupt else "RUN "
+    def cpu_state():
+        if halted: return STATE_STOP
+        return STATE_INT if in_interrupt else STATE_RUN
 
-    def log(stage_name, msg):
-        if verbose:
-            print(f"tick {tick:5} | {state_label()} | {stage_name:5} | {msg}")
+    def log(phase, message):
+        if not verbose:
+            return
+        print(f"[tick {tick:6}] {cpu_state()} {phase} | {message}", file=log_stream)
+
+    def _char_repr(c):
+        return f"'{chr(c)}'" if 32 <= c < 127 else f"\\x{c:02X}"
+
+    def _mem_read_word(addr):
+        return int.from_bytes(memory[addr:addr+4], "little", signed=True)
+
+    def _mem_write_word(addr, value):
+        memory[addr:addr+4] = (value & 0xFFFFFFFF).to_bytes(4, "little", signed=False)
 
     while not halted and tick < TICK_LIMIT:
 
-        if stage == "FETCH":
+        if stage == PHASE_FETCH:
             # === проверка прерывания — только на границе инструкций ===
             if interrupt_enabled and not in_interrupt and schedule:
                 sched_tick, sched_char = schedule[0]
@@ -96,11 +118,14 @@ def run(image_bytes, schedule=None, verbose=True):
                     in_interrupt = True
                     interrupt_enabled = False
                     pc = INTERRUPT_VECTOR
-                    log("TRAP ", f"--> ISR, saved_pc=0x{saved_pc:04X}, vector=0x{INTERRUPT_VECTOR:04X}, port{PORT_STDIN}<=0x{sched_char:02X}")
+                    trap_count += 1
+                    log(PHASE_TRAP,
+                        f"interrupt: saved_pc=0x{saved_pc:04X}, vector=0x{INTERRUPT_VECTOR:04X}, "
+                        f"port#{PORT_STDIN}<={sched_char:#04x} ({_char_repr(sched_char)})")
                     tick += 1
                     continue
 
-            # === FETCH: читаем 4 байта из памяти, декодируем, PC += 4 ===
+            # === FETCH ===
             if pc + INSTR_SIZE > MEM_SIZE:
                 raise RuntimeError(f"PC=0x{pc:04X} вышел за пределы памяти")
             word_bytes = bytes(memory[pc:pc+INSTR_SIZE])
@@ -108,87 +133,126 @@ def run(image_bytes, schedule=None, verbose=True):
             ir_pc = pc
             ir_word = int.from_bytes(word_bytes, "big")
             opcode, rd, rs, imm = ir
-            log("FETCH", f"PC=0x{ir_pc:04X} IR=0x{ir_word:08X} ({opcode.name})")
+            log(PHASE_FETCH,
+                f"PC=0x{ir_pc:04X} | IR=0x{ir_word:08X} ({mnemonic(opcode, rd, rs, imm)})")
             pc += INSTR_SIZE
             tick += 1
-            stage = "EXEC"
+            stage = PHASE_EXEC
             continue
 
         # === EXEC ===
         opcode, rd, rs, imm = ir
-        regs_str = " ".join(f"R{i}={registers[i]}" for i in range(8))
-        log("EXEC ",
-            f"PC=0x{ir_pc:04X} | {regs_str} | ZF={int(zero_flag)} NF={int(neg_flag)} | {opcode.name}")
+        instr_count += 1
+        mnem = mnemonic(opcode, rd, rs, imm)
+        effect = ""    # описание эффекта инструкции для лога
 
         if opcode == Opcode.ADD:
             registers[rd] = registers[rd] + registers[rs]
             zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
+            effect = f"R{rd} := {registers[rd]}"
         elif opcode == Opcode.SUB:
             registers[rd] = registers[rd] - registers[rs]
             zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
+            effect = f"R{rd} := {registers[rd]}"
         elif opcode == Opcode.MUL:
             registers[rd] = registers[rd] * registers[rs]
             zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
+            effect = f"R{rd} := {registers[rd]}"
         elif opcode == Opcode.DIV:
             registers[rd] = registers[rd] // registers[rs]
             zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
+            effect = f"R{rd} := {registers[rd]}"
         elif opcode == Opcode.MOD:
             registers[rd] = registers[rd] % registers[rs]
             zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
+            effect = f"R{rd} := {registers[rd]}"
         elif opcode == Opcode.CMP:
             result = registers[rd] - registers[rs]
             zero_flag = (result == 0); neg_flag = (result < 0)
+            effect = f"R{rd} - R{rs} = {result}"
 
         elif opcode == Opcode.LD:
             addr = registers[rs] + imm
-            registers[rd] = _read_word(memory, addr)
+            value = _mem_read_word(addr)
+            registers[rd] = value
+            effect = f"R{rd} := mem[0x{addr:04X}] = {value}"
         elif opcode == Opcode.ST:
             addr = registers[rs] + imm
-            _write_word(memory, addr, registers[rd])
+            _mem_write_word(addr, registers[rd])
+            effect = f"mem[0x{addr:04X}] := {registers[rd]}"
 
         elif opcode == Opcode.LI:
             registers[rd] = imm
+            effect = f"R{rd} := {imm}"
 
         elif opcode == Opcode.JMP:
             pc = imm
-        elif opcode == Opcode.JZ:
-            if zero_flag: pc = imm
-        elif opcode == Opcode.JNZ:
-            if not zero_flag: pc = imm
-        elif opcode == Opcode.JL:
-            if neg_flag: pc = imm
-        elif opcode == Opcode.JLE:
-            if neg_flag or zero_flag: pc = imm
-        elif opcode == Opcode.JG:
-            if not neg_flag and not zero_flag: pc = imm
-        elif opcode == Opcode.JGE:
-            if not neg_flag: pc = imm
+            effect = f"PC := 0x{imm:04X}"
+        elif opcode in (Opcode.JZ, Opcode.JNZ, Opcode.JL, Opcode.JLE, Opcode.JG, Opcode.JGE):
+            cond_map = {
+                Opcode.JZ:  zero_flag,
+                Opcode.JNZ: not zero_flag,
+                Opcode.JL:  neg_flag,
+                Opcode.JLE: neg_flag or zero_flag,
+                Opcode.JG:  not neg_flag and not zero_flag,
+                Opcode.JGE: not neg_flag,
+            }
+            if cond_map[opcode]:
+                pc = imm
+                effect = f"taken, PC := 0x{imm:04X}"
+            else:
+                effect = "not taken"
 
         elif opcode == Opcode.IN:
-            # imm — номер порта
-            registers[rd] = io.in_port(imm)
+            value = io.in_port(imm)
+            registers[rd] = value
+            effect = f"R{rd} := port#{imm} = 0x{value:02X} ({_char_repr(value)})"
         elif opcode == Opcode.OUT:
+            value = registers[rs] & 0xFF
             io.out_port(imm, registers[rs])
+            effect = f"port#{imm} <= 0x{value:02X} ({_char_repr(value)})"
 
         elif opcode == Opcode.EI:
             interrupt_enabled = True
+            effect = "interrupts enabled"
         elif opcode == Opcode.DI:
             interrupt_enabled = False
+            effect = "interrupts disabled"
         elif opcode == Opcode.IRET:
             pc = saved_pc
             in_interrupt = False
             interrupt_enabled = True
+            effect = f"IRET, PC := 0x{saved_pc:04X}"
 
         elif opcode == Opcode.HALT:
             halted = True
+            effect = "(stop)"
         else:
             raise ValueError(f"неизвестный опкод {opcode}")
 
+        flags = f"ZF={int(zero_flag)} NF={int(neg_flag)}"
+        log(PHASE_EXEC,
+            f"PC=0x{ir_pc:04X} | {mnem:<28} | {effect:<40} | {flags}")
+
         tick += 1
-        stage = "FETCH"
+        stage = PHASE_FETCH
+
+    # === финальная сводка ===
+    if verbose:
+        print(f"\n--- summary ---", file=log_stream)
+        print(f"ticks executed: {tick}", file=log_stream)
+        print(f"instructions:   {instr_count}", file=log_stream)
+        print(f"interrupts:     {trap_count}", file=log_stream)
+        print(f"output ({len(io.out_buf)} bytes): "
+              f"{''.join(chr(c) if 32 <= c < 127 else f'<{c:02X}>' for c in io.out_buf)}",
+              file=log_stream)
+        regs_dump = ' '.join(f"R{i}={registers[i]}" for i in range(8))
+        print(f"final regs:     {regs_dump}", file=log_stream)
+        print(f"final flags:    ZF={int(zero_flag)} NF={int(neg_flag)}", file=log_stream)
 
     if tick >= TICK_LIMIT:
-        print(f"!!! достигнут лимит {TICK_LIMIT} тактов — программа зависла")
+        print(f"!!! достигнут лимит {TICK_LIMIT} тактов — программа зависла",
+              file=log_stream)
 
     return io.out_buf
 
@@ -197,18 +261,35 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("Usage: python machine.py <bin_file> [input_file] [--quiet]")
+        print("Usage: python machine.py <bin_file> [input_file] [--quiet] [--log <file>]")
         sys.exit(1)
 
     quiet = "--quiet" in sys.argv
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    log_path = None
+    if "--log" in sys.argv:
+        idx = sys.argv.index("--log")
+        if idx + 1 >= len(sys.argv):
+            print("--log требует имя файла")
+            sys.exit(1)
+        log_path = sys.argv[idx + 1]
+    # отфильтровываем флаги, оставляем позиционные
+    positional = []
+    skip = False
+    for a in sys.argv[1:]:
+        if skip:
+            skip = False; continue
+        if a == "--quiet":
+            continue
+        if a == "--log":
+            skip = True; continue
+        positional.append(a)
 
-    bin_file = args[0]
+    bin_file = positional[0]
     image = read_image(bin_file)
 
     schedule = []
-    if len(args) > 1:
-        input_file = args[1]
+    if len(positional) > 1:
+        input_file = positional[1]
         with open(input_file, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
@@ -225,5 +306,14 @@ if __name__ == "__main__":
                     code = ord(char[0])
                 schedule.append((t, code))
 
-    output = run(image, schedule=schedule, verbose=not quiet)
+    log_stream = None
+    if log_path:
+        log_stream = open(log_path, "w", encoding="utf-8")
+
+    output = run(image, schedule=schedule, verbose=not quiet, log_stream=log_stream)
+
+    if log_stream:
+        log_stream.close()
+        print(f"журнал записан в: {log_path}")
+
     print("OUTPUT:", "".join(chr(c) if 32 <= c < 127 else f"<{c}>" for c in output))
