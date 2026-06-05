@@ -188,6 +188,9 @@ def run(image_bytes, schedule=None, verbose=True, log_stream=None):
         elif opcode == Opcode.JMP:
             pc = imm
             effect = f"PC := 0x{imm:04X}"
+        elif opcode == Opcode.JR:
+            pc = registers[rs]
+            effect = f"JR, PC := 0x{pc:04X}"
         elif opcode in (Opcode.JZ, Opcode.JNZ, Opcode.JL, Opcode.JLE, Opcode.JG, Opcode.JGE):
             cond_map = {
                 Opcode.JZ:  zero_flag,

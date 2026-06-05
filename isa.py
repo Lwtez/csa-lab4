@@ -26,6 +26,7 @@ class Opcode(IntEnum):
     IRET = 20
     EI = 21
     DI = 22
+    JR = 23
 
 
 _BRANCH_OPS = {Opcode.JMP, Opcode.JZ, Opcode.JNZ, Opcode.JL,
@@ -58,6 +59,8 @@ def mnemonic(opcode, rd, rs, imm):
     name = opcode.name.lower()
     if opcode in _NO_OPERAND_OPS:
         return name
+    if opcode == Opcode.JR:
+        return f"{name} r{rs}"
     if opcode in _BRANCH_OPS:
         return f"{name} 0x{imm & 0xFFFF:04X}"
     if opcode in _MEM_OPS:
