@@ -15,8 +15,8 @@ KEYWORDS_TYPE = {
     "print": "PRINT",
     "print_num": "PRINT_NUM",
     "print_str": "PRINT_STR",
-    "read": "READ",
     "function": "FUNCTION",
+    "interrupt": "INTERRUPT",
     "return": "RETURN",
 }
 
@@ -25,8 +25,7 @@ KEYWORDS_TYPE = {
 WORD_SIZE   = 4
 DATA_BASE   = 0x1000     # bump-аллокатор для глобалок и фреймов функций
 STR_BUF     = 0x1300     # буфер цифр для print_num
-N_CELL      = 0x1340     # накапливаемое число из read()
-READY_CELL  = 0x1344     # флаг "ввод готов"
+INTR_VECTOR_TABLE = 0x12F0   # 4 вектора × 4 байта — обязан совпадать с machine.py
 STR_BASE    = 0x1400     # статические pstr-строки
 STACK_INIT  = 0x1800     # начало стека (растёт вверх)
 
@@ -36,21 +35,27 @@ SP = 7   # R7 — указатель стека
 PORT_STDIN  = 0
 PORT_STDOUT = 1
 
+# ---------- набор встроенных функций ----------
+BUILTINS = {
+    "set_interrupt_handler",
+    "enable_interrupts",
+    "disable_interrupts",
+    "port_in",
+    "port_out",
+}
+
 
 def tokenize(text):
     tokens = []
     pos = 0
     while pos < len(text):
         ch = text[pos]
-        # пропуск пробелов
         if ch in " \t\n\r":
             pos += 1; continue
-        # комментарий `//` до конца строки
         if pos + 1 < len(text) and text[pos:pos+2] == "//":
             while pos < len(text) and text[pos] != "\n":
                 pos += 1
             continue
-        # строковый литерал
         if ch == '"':
             pos += 1
             start = pos
@@ -58,16 +63,13 @@ def tokenize(text):
                 pos += 1
             if pos >= len(text):
                 raise SyntaxError("незакрытая строка")
-            value = text[start:pos]
-            pos += 1
+            value = text[start:pos]; pos += 1
             tokens.append(("STRING", value)); continue
-        # число
         if ch.isdigit():
             start = pos
             while pos < len(text) and text[pos].isdigit():
                 pos += 1
             tokens.append(("NUMBER", int(text[start:pos]))); continue
-        # идентификатор/ключевое слово
         if ch.isalpha() or ch == "_":
             start = pos
             while pos < len(text) and (text[pos].isalnum() or text[pos] == "_"):
@@ -78,10 +80,8 @@ def tokenize(text):
             else:
                 tokens.append(("IDENT", word))
             continue
-        # двухсимвольные операторы
         if pos + 1 < len(text) and text[pos:pos+2] in ("==", "!=", "<=", ">="):
             tokens.append(("OP", text[pos:pos+2])); pos += 2; continue
-        # односимвольные операторы и знаки
         if ch in "+-*/%<>":
             tokens.append(("OP", ch)); pos += 1; continue
         if ch == "=": tokens.append(("ASSIGN", "=")); pos += 1; continue
@@ -99,7 +99,7 @@ def tokenize(text):
 # ============================================================
 
 _STMT_STARTERS = {"VAR", "WHILE", "IF", "ELSE", "PRINT", "PRINT_NUM",
-                  "PRINT_STR", "RETURN", "FUNCTION"}
+                  "PRINT_STR", "RETURN", "FUNCTION", "INTERRUPT"}
 
 
 class Parser:
@@ -119,8 +119,6 @@ class Parser:
         self.pos += 1
         return tok_value
 
-    # --- выражения (приоритеты снизу вверх) ---
-
     def parse_factor(self):
         tok_type, tok_value = self.peek()
         if tok_type == "NUMBER":
@@ -131,14 +129,8 @@ class Parser:
             node = self.parse_cmp()
             self.expect("RPAREN")
             return node
-        if tok_type == "READ":
-            self.pos += 1
-            self.expect("LPAREN")
-            self.expect("RPAREN")
-            return {"type": "Read"}
         if tok_type == "IDENT":
             self.pos += 1
-            # вызов функции?
             if self.peek()[0] == "LPAREN":
                 self.pos += 1
                 args = []
@@ -156,27 +148,22 @@ class Parser:
         node = self.parse_factor()
         while self.peek()[0] == "OP" and self.peek()[1] in ("*", "/", "%"):
             op = self.peek()[1]; self.pos += 1
-            right = self.parse_factor()
-            node = {"type": "BinOp", "op": op, "left": node, "right": right}
+            node = {"type": "BinOp", "op": op, "left": node, "right": self.parse_factor()}
         return node
 
     def parse_add(self):
         node = self.parse_term()
         while self.peek()[0] == "OP" and self.peek()[1] in ("+", "-"):
             op = self.peek()[1]; self.pos += 1
-            right = self.parse_term()
-            node = {"type": "BinOp", "op": op, "left": node, "right": right}
+            node = {"type": "BinOp", "op": op, "left": node, "right": self.parse_term()}
         return node
 
     def parse_cmp(self):
         node = self.parse_add()
         while self.peek()[0] == "OP" and self.peek()[1] in ("==", "!=", "<=", "<", ">=", ">"):
             op = self.peek()[1]; self.pos += 1
-            right = self.parse_add()
-            node = {"type": "BinOp", "op": op, "left": node, "right": right}
+            node = {"type": "BinOp", "op": op, "left": node, "right": self.parse_add()}
         return node
-
-    # --- операторы ---
 
     def parse_statement(self):
         tok_type, _ = self.peek()
@@ -188,9 +175,8 @@ class Parser:
         if tok_type == "PRINT_STR":  return self.parse_print_str()
         if tok_type == "RETURN":     return self.parse_return()
         if tok_type == "IDENT":
-            # f(args) как statement vs assign
             if self.peek(1)[0] == "LPAREN":
-                call = self.parse_factor()    # вернёт FuncCall
+                call = self.parse_factor()
                 return {"type": "CallStmt", "call": call}
             return self.parse_assign()
         raise SyntaxError(f"неожиданный токен {tok_type}")
@@ -199,14 +185,12 @@ class Parser:
         self.expect("VAR")
         name = self.expect("IDENT")
         self.expect("ASSIGN")
-        value = self.parse_cmp()
-        return {"type": "VarDecl", "name": name, "value": value}
+        return {"type": "VarDecl", "name": name, "value": self.parse_cmp()}
 
     def parse_assign(self):
         name = self.expect("IDENT")
         self.expect("ASSIGN")
-        value = self.parse_cmp()
-        return {"type": "Assign", "name": name, "value": value}
+        return {"type": "Assign", "name": name, "value": self.parse_cmp()}
 
     def parse_while(self):
         self.expect("WHILE"); self.expect("LPAREN")
@@ -255,14 +239,14 @@ class Parser:
 
     def parse_return(self):
         self.expect("RETURN")
-        # return может быть без значения: если следующий токен — конец блока или
-        # начало нового statement'а, у return нет выражения.
         nxt = self.peek()[0]
         if nxt in _STMT_STARTERS or nxt in ("RBRACE", "EOF"):
             return {"type": "Return", "value": None}
         return {"type": "Return", "value": self.parse_cmp()}
 
-    def parse_function_decl(self):
+    def parse_function_decl(self, is_interrupt=False):
+        if is_interrupt:
+            self.expect("INTERRUPT")
         self.expect("FUNCTION")
         name = self.expect("IDENT")
         self.expect("LPAREN")
@@ -272,19 +256,26 @@ class Parser:
             while self.peek()[0] == "COMMA":
                 self.pos += 1
                 params.append(self.expect("IDENT"))
-        self.expect("RPAREN"); self.expect("LBRACE")
+        self.expect("RPAREN")
+        if is_interrupt and params:
+            raise SyntaxError(f"interrupt-функция '{name}' не должна иметь параметров")
+        self.expect("LBRACE")
         body = []
         while self.peek()[0] != "RBRACE":
             body.append(self.parse_statement())
         self.expect("RBRACE")
-        return {"type": "FuncDecl", "name": name, "params": params, "body": body}
+        return {"type": "FuncDecl", "name": name, "params": params,
+                "body": body, "is_interrupt": is_interrupt}
 
     def parse(self):
         functions = []
         statements = []
         while self.pos < len(self.tokens):
-            if self.peek()[0] == "FUNCTION":
-                functions.append(self.parse_function_decl())
+            tok = self.peek()[0]
+            if tok == "FUNCTION":
+                functions.append(self.parse_function_decl(is_interrupt=False))
+            elif tok == "INTERRUPT":
+                functions.append(self.parse_function_decl(is_interrupt=True))
             else:
                 statements.append(self.parse_statement())
         return {"type": "Program", "functions": functions, "body": statements}
@@ -300,18 +291,17 @@ def parse(tokens):
 
 class CodeGen:
     def __init__(self):
-        self.code = []                  # элементы: (op, rd, rs, imm) или (op, rd, rs, label_str)
-        self.global_vars = {}           # name -> byte addr
-        self.functions = {}             # name -> dict
+        self.code = []
+        self.global_vars = {}
+        self.functions = {}
         self.next_data_addr = DATA_BASE
-        self.labels = {}                # label_name -> byte addr
+        self.labels = {}
         self.label_counter = 0
         self.next_str_addr = STR_BASE
-        self.data_section = {}          # static data: addr -> bytes
-        self.current_function = None    # имя текущей функции при кодгене её тела
+        self.data_section = {}
+        self.current_function = None
 
     # ---------- инфраструктура ----------
-
     def new_label(self, base):
         self.label_counter += 1
         return f"{base}_{self.label_counter}"
@@ -320,7 +310,6 @@ class CodeGen:
         self.labels[name] = len(self.code) * INSTR_SIZE
 
     def emit(self, opcode, rd=0, rs=0, imm=0):
-        # imm может быть int или строка (метка) — разрешится при link()
         self.code.append((opcode, rd, rs, imm))
 
     def emit_jump(self, opcode, label):
@@ -336,13 +325,11 @@ class CodeGen:
             linked.append((op, rd, rs, imm))
         return linked
 
-    # ---------- работа с переменными (scope: local → global) ----------
-
     def _alloc_slot(self):
         addr = self.next_data_addr
         self.next_data_addr += WORD_SIZE
-        if self.next_data_addr > STR_BUF:
-            raise RuntimeError("переполнение области данных (variables + frames)")
+        if self.next_data_addr > INTR_VECTOR_TABLE:
+            raise RuntimeError("переполнение области данных")
         return addr
 
     def declare_local(self, name):
@@ -357,15 +344,11 @@ class CodeGen:
         return self.global_vars[name]
 
     def var_addr(self, name):
-        """Поиск: сначала локальные текущей функции, потом глобалы.
-        Если нигде нет — создаём как глобал."""
         if self.current_function:
             fn = self.functions[self.current_function]
             if name in fn["locals"]:
                 return fn["locals"][name]
         return self.declare_global(name)
-
-    # ---------- стек (для вычисления выражений) ----------
 
     def push(self, reg):
         self.emit(Opcode.ST, rd=reg, rs=SP, imm=0)
@@ -378,37 +361,23 @@ class CodeGen:
         self.emit(Opcode.LD, rd=reg, rs=SP, imm=0)
 
     # ---------- выражения ----------
-
     def gen_expr(self, node):
         t = node["type"]
         if t == "Num":
-            self.emit(Opcode.LI, rd=1, imm=node["value"])
-            self.push(1)
+            self.emit(Opcode.LI, rd=1, imm=node["value"]); self.push(1)
         elif t == "Var":
-            addr = self.var_addr(node["name"])
-            self.emit(Opcode.LD, rd=1, rs=0, imm=addr)
-            self.push(1)
+            name = node["name"]
+            # Имя функции в выражении даёт её entry-адрес
+            if name in self.functions:
+                self.emit(Opcode.LI, rd=1, imm=self.functions[name]["entry_label"])
+                self.push(1)
+            else:
+                addr = self.var_addr(name)
+                self.emit(Opcode.LD, rd=1, rs=0, imm=addr); self.push(1)
         elif t == "BinOp":
-            self.gen_expr(node["left"])
-            self.gen_expr(node["right"])
-            self.pop(2)
-            self.pop(1)
-            self.gen_binop(node["op"])
-            self.push(1)
-        elif t == "Read":
-            self.emit(Opcode.LI, rd=1, imm=0)
-            self.emit(Opcode.ST, rd=1, rs=0, imm=N_CELL)
-            self.emit(Opcode.ST, rd=1, rs=0, imm=READY_CELL)
-            self.emit(Opcode.EI)
-            wait_top = self.new_label("read_wait")
-            self.place_label(wait_top)
-            self.emit(Opcode.LD, rd=1, rs=0, imm=READY_CELL)
-            self.emit(Opcode.LI, rd=2, imm=0)
-            self.emit(Opcode.CMP, rd=1, rs=2)
-            self.emit_jump(Opcode.JZ, wait_top)
-            self.emit(Opcode.DI)
-            self.emit(Opcode.LD, rd=1, rs=0, imm=N_CELL)
-            self.push(1)
+            self.gen_expr(node["left"]); self.gen_expr(node["right"])
+            self.pop(2); self.pop(1)
+            self.gen_binop(node["op"]); self.push(1)
         elif t == "FuncCall":
             self.gen_call(node)
         else:
@@ -422,11 +391,10 @@ class CodeGen:
         cmp_jumps = {"==": Opcode.JZ, "!=": Opcode.JNZ,
                      "<":  Opcode.JL, "<=": Opcode.JLE,
                      ">":  Opcode.JG, ">=": Opcode.JGE}
-        jump_op = cmp_jumps[op]
-        true_lbl = self.new_label("cmp_true")
-        end_lbl  = self.new_label("cmp_end")
+        jop = cmp_jumps[op]
+        true_lbl = self.new_label("cmp_true"); end_lbl = self.new_label("cmp_end")
         self.emit(Opcode.CMP, rd=1, rs=2)
-        self.emit_jump(jump_op, true_lbl)
+        self.emit_jump(jop, true_lbl)
         self.emit(Opcode.LI, rd=1, imm=0)
         self.emit_jump(Opcode.JMP, end_lbl)
         self.place_label(true_lbl)
@@ -434,55 +402,97 @@ class CodeGen:
         self.place_label(end_lbl)
 
     def gen_call(self, node):
-        """Вызов функции как выражение: оставляет возвращаемое значение на стеке."""
+        """Вызов: либо builtin, либо обычная функция. Оставляет значение на стеке."""
         name = node["name"]
+        if name in BUILTINS:
+            return self.gen_builtin_call(node)
         if name not in self.functions:
             raise RuntimeError(f"вызов неизвестной функции '{name}'")
         fn = self.functions[name]
+        if fn["is_interrupt"]:
+            raise RuntimeError(f"interrupt-функцию '{name}' нельзя вызывать вручную")
         if len(node["args"]) != len(fn["params"]):
             raise RuntimeError(
                 f"функция {name} ждёт {len(fn['params'])} аргументов, передано {len(node['args'])}")
-
-        # вычисляем аргументы и пишем в ячейки фрейма (param-сначала-в-стек, потом в ячейку)
-        for arg, param_name in zip(node["args"], fn["params"]):
-            self.gen_expr(arg)
-            self.pop(1)
-            self.emit(Opcode.ST, rd=1, rs=0, imm=fn["locals"][param_name])
-
-        # адрес возврата → в RA-ячейку фрейма
+        for arg, p in zip(node["args"], fn["params"]):
+            self.gen_expr(arg); self.pop(1)
+            self.emit(Opcode.ST, rd=1, rs=0, imm=fn["locals"][p])
         ret_lbl = self.new_label(f"ret_from_{name}")
-        self.emit(Opcode.LI, rd=1, imm=ret_lbl)        # imm = строковая метка, разрешится в link
+        self.emit(Opcode.LI, rd=1, imm=ret_lbl)
         self.emit(Opcode.ST, rd=1, rs=0, imm=fn["ra_addr"])
-
-        # прыгаем в функцию
         self.emit_jump(Opcode.JMP, fn["entry_label"])
-        # точка возврата
         self.place_label(ret_lbl)
+        self.emit(Opcode.LD, rd=1, rs=0, imm=fn["rv_addr"]); self.push(1)
 
-        # читаем возвращаемое значение и кладём на стек
-        self.emit(Opcode.LD, rd=1, rs=0, imm=fn["rv_addr"])
-        self.push(1)
+    # ---------- builtins ----------
+    def gen_builtin_call(self, node):
+        name = node["name"]; args = node["args"]
+
+        if name == "set_interrupt_handler":
+            if len(args) != 2:
+                raise SyntaxError("set_interrupt_handler(vec, fn) требует 2 аргумента")
+            # вычисляем номер вектора → r1, превращаем в адрес ячейки таблицы
+            self.gen_expr(args[0]); self.pop(1)
+            self.emit(Opcode.LI, rd=2, imm=WORD_SIZE)
+            self.emit(Opcode.MUL, rd=1, rs=2)
+            self.emit(Opcode.LI, rd=2, imm=INTR_VECTOR_TABLE)
+            self.emit(Opcode.ADD, rd=1, rs=2)
+            self.push(1)                                  # сохраняем cell-адрес
+            # вычисляем адрес функции → на стек
+            self.gen_expr(args[1])
+            self.pop(2)                                   # r2 = handler entry
+            self.pop(1)                                   # r1 = vector cell addr
+            self.emit(Opcode.ST, rd=2, rs=1, imm=0)
+            self.emit(Opcode.LI, rd=1, imm=0); self.push(1)   # значение builtin'а
+
+        elif name == "enable_interrupts":
+            if args:
+                raise SyntaxError("enable_interrupts() без аргументов")
+            self.emit(Opcode.EI)
+            self.emit(Opcode.LI, rd=1, imm=0); self.push(1)
+
+        elif name == "disable_interrupts":
+            if args:
+                raise SyntaxError("disable_interrupts() без аргументов")
+            self.emit(Opcode.DI)
+            self.emit(Opcode.LI, rd=1, imm=0); self.push(1)
+
+        elif name == "port_in":
+            if len(args) != 1:
+                raise SyntaxError("port_in(N) требует 1 аргумент")
+            if args[0]["type"] != "Num":
+                raise SyntaxError("port_in: номер порта должен быть константой")
+            port = args[0]["value"]
+            self.emit(Opcode.IN, rd=1, rs=0, imm=port); self.push(1)
+
+        elif name == "port_out":
+            if len(args) != 2:
+                raise SyntaxError("port_out(N, val) требует 2 аргумента")
+            if args[0]["type"] != "Num":
+                raise SyntaxError("port_out: номер порта должен быть константой")
+            port = args[0]["value"]
+            self.gen_expr(args[1]); self.pop(1)
+            self.emit(Opcode.OUT, rd=0, rs=1, imm=port)
+            self.emit(Opcode.LI, rd=1, imm=0); self.push(1)
+
+        else:
+            raise RuntimeError(f"неизвестный builtin '{name}'")
 
     # ---------- операторы ----------
-
     def gen_statement(self, node):
         t = node["type"]
         if t == "VarDecl":
             self.gen_expr(node["value"]); self.pop(1)
-            if self.current_function:
-                addr = self.declare_local(node["name"])
-            else:
-                addr = self.declare_global(node["name"])
+            addr = (self.declare_local(node["name"]) if self.current_function
+                    else self.declare_global(node["name"]))
             self.emit(Opcode.ST, rd=1, rs=0, imm=addr)
 
         elif t == "Assign":
             self.gen_expr(node["value"]); self.pop(1)
-            addr = self.var_addr(node["name"])
-            self.emit(Opcode.ST, rd=1, rs=0, imm=addr)
+            self.emit(Opcode.ST, rd=1, rs=0, imm=self.var_addr(node["name"]))
 
         elif t == "While":
-            top = self.new_label("while_top")
-            end = self.new_label("while_end")
+            top = self.new_label("while_top"); end = self.new_label("while_end")
             self.place_label(top)
             self.gen_expr(node["cond"]); self.pop(1)
             self.emit(Opcode.LI, rd=2, imm=0)
@@ -494,8 +504,7 @@ class CodeGen:
             self.place_label(end)
 
         elif t == "If":
-            else_lbl = self.new_label("if_else")
-            end_lbl  = self.new_label("if_end")
+            else_lbl = self.new_label("if_else"); end_lbl = self.new_label("if_end")
             self.gen_expr(node["cond"]); self.pop(1)
             self.emit(Opcode.LI, rd=2, imm=0)
             self.emit(Opcode.CMP, rd=1, rs=2)
@@ -520,7 +529,6 @@ class CodeGen:
             self.gen_print_str(node["value"])
 
         elif t == "CallStmt":
-            # вычисляем вызов как выражение, отбрасываем результат
             self.gen_expr(node["call"])
             self.pop(1)
 
@@ -534,19 +542,22 @@ class CodeGen:
         if self.current_function is None:
             raise RuntimeError("return вне функции")
         fn = self.functions[self.current_function]
+        if fn["is_interrupt"]:
+            if node["value"] is not None:
+                raise SyntaxError("interrupt-функция не может возвращать значение")
+            self.emit(Opcode.IRET)
+            return
         if node["value"] is not None:
-            self.gen_expr(node["value"])
-            self.pop(1)
+            self.gen_expr(node["value"]); self.pop(1)
         else:
             self.emit(Opcode.LI, rd=1, imm=0)
         self.emit(Opcode.ST, rd=1, rs=0, imm=fn["rv_addr"])
         self.emit(Opcode.LD, rd=1, rs=0, imm=fn["ra_addr"])
         self.emit(Opcode.JR, rd=0, rs=1, imm=0)
 
-    # ---------- print_num: число в r1 → печать десятичное ----------
+    # ---------- print_num ----------
     def gen_print_num(self):
-        zero_skip = self.new_label("pn_zero_skip")
-        end_lbl   = self.new_label("pn_end")
+        zero_skip = self.new_label("pn_zero_skip"); end_lbl = self.new_label("pn_end")
         self.emit(Opcode.LI, rd=2, imm=0)
         self.emit(Opcode.CMP, rd=1, rs=2)
         self.emit_jump(Opcode.JNZ, zero_skip)
@@ -555,12 +566,11 @@ class CodeGen:
         self.emit_jump(Opcode.JMP, end_lbl)
         self.place_label(zero_skip)
         self.emit(Opcode.LI, rd=4, imm=0)
-        extract_top = self.new_label("pn_ext_top")
-        extract_end = self.new_label("pn_ext_end")
-        self.place_label(extract_top)
+        ext_top = self.new_label("pn_ext_top"); ext_end = self.new_label("pn_ext_end")
+        self.place_label(ext_top)
         self.emit(Opcode.LI, rd=2, imm=0)
         self.emit(Opcode.CMP, rd=1, rs=2)
-        self.emit_jump(Opcode.JZ, extract_end)
+        self.emit_jump(Opcode.JZ, ext_end)
         self.emit(Opcode.LI, rd=3, imm=0)
         self.emit(Opcode.ADD, rd=3, rs=1)
         self.emit(Opcode.LI, rd=2, imm=10)
@@ -572,23 +582,22 @@ class CodeGen:
         self.emit(Opcode.ADD, rd=4, rs=2)
         self.emit(Opcode.LI, rd=2, imm=10)
         self.emit(Opcode.DIV, rd=1, rs=2)
-        self.emit_jump(Opcode.JMP, extract_top)
-        self.place_label(extract_end)
-        print_top = self.new_label("pn_prn_top")
-        print_end = self.new_label("pn_prn_end")
-        self.place_label(print_top)
+        self.emit_jump(Opcode.JMP, ext_top)
+        self.place_label(ext_end)
+        prn_top = self.new_label("pn_prn_top"); prn_end = self.new_label("pn_prn_end")
+        self.place_label(prn_top)
         self.emit(Opcode.LI, rd=2, imm=0)
         self.emit(Opcode.CMP, rd=4, rs=2)
-        self.emit_jump(Opcode.JZ, print_end)
+        self.emit_jump(Opcode.JZ, prn_end)
         self.emit(Opcode.LI, rd=2, imm=WORD_SIZE)
         self.emit(Opcode.SUB, rd=4, rs=2)
         self.emit(Opcode.LD, rd=3, rs=4, imm=STR_BUF)
         self.emit(Opcode.OUT, rd=0, rs=3, imm=PORT_STDOUT)
-        self.emit_jump(Opcode.JMP, print_top)
-        self.place_label(print_end)
+        self.emit_jump(Opcode.JMP, prn_top)
+        self.place_label(prn_end)
         self.place_label(end_lbl)
 
-    # ---------- print_str: статическая pstr-строка в секции данных ----------
+    # ---------- print_str ----------
     def gen_print_str(self, s):
         length = len(s)
         base = self.next_str_addr
@@ -601,8 +610,7 @@ class CodeGen:
         self.emit(Opcode.LD, rd=5, rs=0, imm=base)
         self.emit(Opcode.LI, rd=2, imm=WORD_SIZE)
         self.emit(Opcode.MUL, rd=5, rs=2)
-        loop_top = self.new_label("strp_top")
-        loop_end = self.new_label("strp_end")
+        loop_top = self.new_label("strp_top"); loop_end = self.new_label("strp_end")
         self.place_label(loop_top)
         self.emit(Opcode.CMP, rd=4, rs=5)
         self.emit_jump(Opcode.JGE, loop_end)
@@ -613,29 +621,7 @@ class CodeGen:
         self.emit_jump(Opcode.JMP, loop_top)
         self.place_label(loop_end)
 
-    # ---------- ISR ----------
-    def gen_isr(self):
-        is_newline = self.new_label("isr_nl")
-        isr_ret    = self.new_label("isr_ret")
-        self.emit(Opcode.IN, rd=6, rs=0, imm=PORT_STDIN)
-        self.emit(Opcode.LI, rd=5, imm=10)
-        self.emit(Opcode.CMP, rd=6, rs=5)
-        self.emit_jump(Opcode.JZ, is_newline)
-        self.emit(Opcode.LI, rd=5, imm=48)
-        self.emit(Opcode.SUB, rd=6, rs=5)
-        self.emit(Opcode.LD, rd=5, rs=0, imm=N_CELL)
-        self.emit(Opcode.LI, rd=4, imm=10)
-        self.emit(Opcode.MUL, rd=5, rs=4)
-        self.emit(Opcode.ADD, rd=5, rs=6)
-        self.emit(Opcode.ST, rd=5, rs=0, imm=N_CELL)
-        self.emit_jump(Opcode.JMP, isr_ret)
-        self.place_label(is_newline)
-        self.emit(Opcode.LI, rd=5, imm=1)
-        self.emit(Opcode.ST, rd=5, rs=0, imm=READY_CELL)
-        self.place_label(isr_ret)
-        self.emit(Opcode.IRET)
-
-    # ---------- регистрация функции (выделение ячеек фрейма) ----------
+    # ---------- регистрация и тело функций ----------
     def register_function(self, fn_decl):
         name = fn_decl["name"]
         if name in self.functions:
@@ -643,6 +629,7 @@ class CodeGen:
         locals_map = {}
         for p in fn_decl["params"]:
             locals_map[p] = self._alloc_slot()
+        # для interrupt-функций ra/rv не используются, но cell всё равно выделим — мелкая трата
         ra_addr = self._alloc_slot()
         rv_addr = self._alloc_slot()
         self.functions[name] = {
@@ -651,6 +638,7 @@ class CodeGen:
             "ra_addr": ra_addr,
             "rv_addr": rv_addr,
             "entry_label": f"func_{name}",
+            "is_interrupt": fn_decl.get("is_interrupt", False),
             "ast": fn_decl,
         }
 
@@ -660,25 +648,29 @@ class CodeGen:
         self.place_label(fn["entry_label"])
         for stmt in fn["ast"]["body"]:
             self.gen_statement(stmt)
-        # неявный return 0, если функция не сделала это сама
-        self.emit(Opcode.LI, rd=1, imm=0)
-        self.emit(Opcode.ST, rd=1, rs=0, imm=fn["rv_addr"])
-        self.emit(Opcode.LD, rd=1, rs=0, imm=fn["ra_addr"])
-        self.emit(Opcode.JR, rd=0, rs=1, imm=0)
+        # неявный return: для ISR — IRET, для обычной — return 0
+        if fn["is_interrupt"]:
+            self.emit(Opcode.IRET)
+        else:
+            self.emit(Opcode.LI, rd=1, imm=0)
+            self.emit(Opcode.ST, rd=1, rs=0, imm=fn["rv_addr"])
+            self.emit(Opcode.LD, rd=1, rs=0, imm=fn["ra_addr"])
+            self.emit(Opcode.JR, rd=0, rs=1, imm=0)
         self.current_function = None
 
     def generate(self, program):
-        # 1-й проход: регистрируем все функции (резервируем ячейки фреймов).
+        # 1-й проход: регистрация всех функций (резерв cells фреймов)
         for fn_decl in program["functions"]:
             self.register_function(fn_decl)
 
         # Layout:
         #  0x0000:        JMP __main__
-        #  0x0004:        тело ISR
         #  __main__:      инициализация SP + main-код + HALT
-        #  func_<name>:   тела функций
+        #  func_<name>:   тела функций (обычные + interrupt)
+        # ISR больше не сидит на фиксированном адресе — её адрес лежит
+        # в таблице векторов INTR_VECTOR_TABLE и устанавливается рантаймом
+        # через set_interrupt_handler.
         self.emit_jump(Opcode.JMP, "__main__")
-        self.gen_isr()
         self.place_label("__main__")
         self.emit(Opcode.LI, rd=SP, imm=STACK_INIT)
         for stmt in program["body"]:
@@ -744,10 +736,12 @@ def translate_file(source_path, output_path):
     write_listing_full(listing_path, code, data)
 
     data_bytes = sum(len(b) for b in data.values())
+    isr_count = sum(1 for f in cg.functions.values() if f["is_interrupt"])
     print(f"OK: {source_path} -> {output_path}  "
           f"(код: {len(code)} инструкций / {code_size} B, "
           f"данные: {data_bytes} B, образ: {image_size} B, "
-          f"функций: {len(cg.functions)}), листинг: {listing_path}")
+          f"функций: {len(cg.functions)} из них ISR: {isr_count}), "
+          f"листинг: {listing_path}")
 
 
 if __name__ == "__main__":

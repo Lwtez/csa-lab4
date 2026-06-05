@@ -3,18 +3,19 @@ from isa import decode, read_image, Opcode, INSTR_SIZE, mnemonic
 MEM_SIZE = 8192          # размер единой памяти в байтах
 TICK_LIMIT = 200_000_000
 
-# Вектор прерывания: первое слово (адрес 0) занято JMP main,
-# код ISR транслятор кладёт начиная с адреса 4.
-INTERRUPT_VECTOR = INSTR_SIZE   # = 0x04
+# === таблица векторов прерываний ================================
+# Адрес обработчика для вектора N лежит в cell INTR_VECTOR_TABLE + N*4.
+# По умолчанию все cell'ы = 0 (т.к. память bytearray занулена).
+# Программист устанавливает обработчик через set_interrupt_handler(N, fn).
+INTR_VECTOR_TABLE = 0x12F0
+KEYBOARD_VEC      = 0    # вектор клавиатуры
 
-# ====== состояния процессора (как у референсных реализаций) ======
+# ====== состояния процессора =====================================
 STATE_STOP = "STOP"
 STATE_RUN  = "RUN "
 STATE_INT  = "INT "
 
 # ====== фазы такта ===============================================
-# В нашей модели ровно две фазы — FETCH и EXEC, плюс отдельная микрооперация
-# TRAP, которая занимает 1 такт при входе в прерывание.
 PHASE_FETCH = "FETCH"
 PHASE_EXEC  = "EXEC "
 PHASE_TRAP  = "TRAP "
@@ -72,10 +73,12 @@ def run(image_bytes, schedule=None, verbose=True, log_stream=None):
     # --- состояние процессора ---
     pc = 0
     saved_pc = 0
+    saved_regs = None          # снимок регистров на момент входа в прерывание
+    saved_flags = (False, False)
     halted = False
     tick = 0
-    instr_count = 0     # сколько инструкций реально дошло до EXEC
-    trap_count = 0      # сколько раз вошли в ISR
+    instr_count = 0
+    trap_count = 0
 
     interrupt_enabled = False
     in_interrupt = False
@@ -112,16 +115,27 @@ def run(image_bytes, schedule=None, verbose=True, log_stream=None):
             if interrupt_enabled and not in_interrupt and schedule:
                 sched_tick, sched_char = schedule[0]
                 if tick >= sched_tick:
+                    # читаем адрес обработчика из таблицы векторов
+                    vec_addr = INTR_VECTOR_TABLE + KEYBOARD_VEC * 4
+                    handler_pc = _mem_read_word(vec_addr)
+                    if handler_pc == 0:
+                        raise RuntimeError(
+                            f"прерывание сработало (port#{PORT_STDIN}), "
+                            f"но обработчик не установлен — вызовите "
+                            f"set_interrupt_handler({KEYBOARD_VEC}, ...) до enable_interrupts()")
                     schedule.pop(0)
                     io.deliver_input(PORT_STDIN, sched_char)
+                    # === сохраняем контекст: PC, все регистры, флаги ===
                     saved_pc = pc
+                    saved_regs = list(registers)
+                    saved_flags = (zero_flag, neg_flag)
                     in_interrupt = True
                     interrupt_enabled = False
-                    pc = INTERRUPT_VECTOR
+                    pc = handler_pc
                     trap_count += 1
                     log(PHASE_TRAP,
-                        f"interrupt: saved_pc=0x{saved_pc:04X}, vector=0x{INTERRUPT_VECTOR:04X}, "
-                        f"port#{PORT_STDIN}<={sched_char:#04x} ({_char_repr(sched_char)})")
+                        f"interrupt vec={KEYBOARD_VEC}: saved_pc=0x{saved_pc:04X}, "
+                        f"handler=0x{handler_pc:04X}, port#{PORT_STDIN}<={sched_char:#04x} ({_char_repr(sched_char)})")
                     tick += 1
                     continue
 
@@ -223,9 +237,13 @@ def run(image_bytes, schedule=None, verbose=True, log_stream=None):
             effect = "interrupts disabled"
         elif opcode == Opcode.IRET:
             pc = saved_pc
+            # восстанавливаем контекст: регистры + флаги
+            if saved_regs is not None:
+                registers[:] = saved_regs
+                zero_flag, neg_flag = saved_flags
             in_interrupt = False
             interrupt_enabled = True
-            effect = f"IRET, PC := 0x{saved_pc:04X}"
+            effect = f"IRET, PC := 0x{saved_pc:04X}, regs+flags restored"
 
         elif opcode == Opcode.HALT:
             halted = True
