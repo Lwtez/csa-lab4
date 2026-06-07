@@ -1,0 +1,411 @@
+in_source: |
+  print_str ( "Hello, world!" )
+in_check_log: true
+in_stdin: ''
+out_log: |
+  DEBUG   machine:simulation    TICK:      0 RUN  FETCH | PC=0x0000 | IR=0x0A000004 (jmp 0x0004) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=0 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      1 RUN  EXEC  | PC=0x0000 | jmp 0x0004                   | PC := 0x0004                             | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=0 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      2 RUN  FETCH | PC=0x0004 | IR=0x09704000 (li r7, #16384) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=0 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      3 RUN  EXEC  | PC=0x0004 | li r7, #16384                | R7 := 16384                              | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      4 RUN  FETCH | PC=0x0008 | IR=0x09400000 (li r4, #0) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      5 RUN  EXEC  | PC=0x0008 | li r4, #0                    | R4 := 0                                  | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      6 RUN  FETCH | PC=0x000C | IR=0x07502400 (ld r5, [r0+0x2400]) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      7 RUN  EXEC  | PC=0x000C | ld r5, [r0+0x2400]           | R5 := mem[0x2400] = 13                   | R0=0 R1=0 R2=0 R3=0 R4=0 R5=13 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      8 RUN  FETCH | PC=0x0010 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=13 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      9 RUN  EXEC  | PC=0x0010 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=0 R4=0 R5=13 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     10 RUN  FETCH | PC=0x0014 | IR=0x03520000 (mul r5, r2) | R0=0 R1=0 R2=4 R3=0 R4=0 R5=13 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     11 RUN  EXEC  | PC=0x0014 | mul r5, r2                   | R5 := 52                                 | R0=0 R1=0 R2=4 R3=0 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     12 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=0 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     13 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -52                            | R0=0 R1=0 R2=4 R3=0 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     14 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=0 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     15 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=0 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     16 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=0 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     17 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x2404] = 72                   | R0=0 R1=0 R2=4 R3=72 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     18 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=72 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     19 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x48 ('H')                     | R0=0 R1=0 R2=4 R3=72 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     20 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=72 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     21 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=72 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     22 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=72 R4=0 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     23 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 4                                  | R0=0 R1=0 R2=4 R3=72 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     24 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=72 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     25 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=72 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     26 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=72 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     27 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -48                            | R0=0 R1=0 R2=4 R3=72 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     28 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=72 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     29 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=72 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     30 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=72 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     31 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x2408] = 101                  | R0=0 R1=0 R2=4 R3=101 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     32 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=101 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     33 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x65 ('e')                     | R0=0 R1=0 R2=4 R3=101 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     34 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=101 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     35 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=101 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     36 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=101 R4=4 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     37 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 8                                  | R0=0 R1=0 R2=4 R3=101 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     38 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=101 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     39 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=101 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     40 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=101 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     41 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -44                            | R0=0 R1=0 R2=4 R3=101 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     42 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=101 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     43 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=101 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     44 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=101 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     45 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x240C] = 108                  | R0=0 R1=0 R2=4 R3=108 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     46 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=108 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     47 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x6C ('l')                     | R0=0 R1=0 R2=4 R3=108 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     48 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=108 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     49 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=108 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     50 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=108 R4=8 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     51 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 12                                 | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     52 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     53 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     54 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     55 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -40                            | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     56 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     57 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     58 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     59 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x2410] = 108                  | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     60 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     61 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x6C ('l')                     | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     62 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     63 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     64 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=108 R4=12 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     65 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 16                                 | R0=0 R1=0 R2=4 R3=108 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     66 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=108 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     67 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=108 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     68 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=108 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     69 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -36                            | R0=0 R1=0 R2=4 R3=108 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     70 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=108 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     71 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=108 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     72 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=108 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     73 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x2414] = 111                  | R0=0 R1=0 R2=4 R3=111 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     74 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=111 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     75 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x6F ('o')                     | R0=0 R1=0 R2=4 R3=111 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     76 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=111 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     77 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=111 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     78 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=111 R4=16 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     79 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 20                                 | R0=0 R1=0 R2=4 R3=111 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     80 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=111 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     81 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=111 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     82 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=111 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     83 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -32                            | R0=0 R1=0 R2=4 R3=111 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     84 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=111 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     85 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=111 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     86 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=111 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     87 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x2418] = 44                   | R0=0 R1=0 R2=4 R3=44 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     88 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=44 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     89 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x2C (',')                     | R0=0 R1=0 R2=4 R3=44 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     90 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=44 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     91 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=44 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     92 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=44 R4=20 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     93 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 24                                 | R0=0 R1=0 R2=4 R3=44 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     94 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=44 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     95 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=44 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     96 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=44 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     97 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -28                            | R0=0 R1=0 R2=4 R3=44 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     98 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=44 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:     99 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=44 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    100 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=44 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    101 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x241C] = 32                   | R0=0 R1=0 R2=4 R3=32 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    102 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=32 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    103 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x20 (' ')                     | R0=0 R1=0 R2=4 R3=32 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    104 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=32 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    105 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=32 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    106 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=32 R4=24 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    107 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 28                                 | R0=0 R1=0 R2=4 R3=32 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    108 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=32 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    109 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=32 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    110 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=32 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    111 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -24                            | R0=0 R1=0 R2=4 R3=32 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    112 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=32 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    113 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=32 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    114 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=32 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    115 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x2420] = 119                  | R0=0 R1=0 R2=4 R3=119 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    116 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=119 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    117 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x77 ('w')                     | R0=0 R1=0 R2=4 R3=119 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    118 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=119 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    119 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=119 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    120 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=119 R4=28 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    121 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 32                                 | R0=0 R1=0 R2=4 R3=119 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    122 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=119 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    123 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=119 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    124 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=119 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    125 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -20                            | R0=0 R1=0 R2=4 R3=119 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    126 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=119 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    127 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=119 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    128 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=119 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    129 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x2424] = 111                  | R0=0 R1=0 R2=4 R3=111 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    130 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=111 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    131 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x6F ('o')                     | R0=0 R1=0 R2=4 R3=111 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    132 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=111 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    133 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=111 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    134 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=111 R4=32 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    135 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 36                                 | R0=0 R1=0 R2=4 R3=111 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    136 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=111 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    137 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=111 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    138 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=111 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    139 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -16                            | R0=0 R1=0 R2=4 R3=111 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    140 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=111 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    141 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=111 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    142 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=111 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    143 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x2428] = 114                  | R0=0 R1=0 R2=4 R3=114 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    144 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=114 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    145 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x72 ('r')                     | R0=0 R1=0 R2=4 R3=114 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    146 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=114 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    147 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=114 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    148 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=114 R4=36 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    149 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 40                                 | R0=0 R1=0 R2=4 R3=114 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    150 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=114 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    151 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=114 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    152 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=114 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    153 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -12                            | R0=0 R1=0 R2=4 R3=114 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    154 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=114 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    155 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=114 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    156 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=114 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    157 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x242C] = 108                  | R0=0 R1=0 R2=4 R3=108 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    158 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=108 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    159 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x6C ('l')                     | R0=0 R1=0 R2=4 R3=108 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    160 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=108 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    161 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=108 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    162 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=108 R4=40 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    163 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 44                                 | R0=0 R1=0 R2=4 R3=108 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    164 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=108 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    165 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=108 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    166 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=108 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    167 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -8                             | R0=0 R1=0 R2=4 R3=108 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    168 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=108 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    169 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=108 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    170 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=108 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    171 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x2430] = 100                  | R0=0 R1=0 R2=4 R3=100 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    172 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=100 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    173 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x64 ('d')                     | R0=0 R1=0 R2=4 R3=100 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    174 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=100 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    175 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=100 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    176 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=100 R4=44 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    177 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 48                                 | R0=0 R1=0 R2=4 R3=100 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    178 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=100 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    179 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=100 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    180 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=100 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    181 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = -4                             | R0=0 R1=0 R2=4 R3=100 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    182 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=100 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    183 RUN  EXEC  | PC=0x001C | jge 0x0034                   | not taken                                | R0=0 R1=0 R2=4 R3=100 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    184 RUN  FETCH | PC=0x0020 | IR=0x07342404 (ld r3, [r4+0x2404]) | R0=0 R1=0 R2=4 R3=100 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    185 RUN  EXEC  | PC=0x0020 | ld r3, [r4+0x2404]           | R3 := mem[0x2434] = 33                   | R0=0 R1=0 R2=4 R3=33 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    186 RUN  FETCH | PC=0x0024 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=33 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    187 RUN  EXEC  | PC=0x0024 | out r3, port#1               | port#1 <= 0x21 ('!')                     | R0=0 R1=0 R2=4 R3=33 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    188 RUN  FETCH | PC=0x0028 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=4 R3=33 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    189 RUN  EXEC  | PC=0x0028 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=33 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    190 RUN  FETCH | PC=0x002C | IR=0x01420000 (add r4, r2) | R0=0 R1=0 R2=4 R3=33 R4=48 R5=52 R6=0 R7=16384 ZF=0 NF=1	input []
+  DEBUG   machine:simulation    TICK:    191 RUN  EXEC  | PC=0x002C | add r4, r2                   | R4 := 52                                 | R0=0 R1=0 R2=4 R3=33 R4=52 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    192 RUN  FETCH | PC=0x0030 | IR=0x0A000018 (jmp 0x0018) | R0=0 R1=0 R2=4 R3=33 R4=52 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    193 RUN  EXEC  | PC=0x0030 | jmp 0x0018                   | PC := 0x0018                             | R0=0 R1=0 R2=4 R3=33 R4=52 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    194 RUN  FETCH | PC=0x0018 | IR=0x06450000 (cmp r4, r5) | R0=0 R1=0 R2=4 R3=33 R4=52 R5=52 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:    195 RUN  EXEC  | PC=0x0018 | cmp r4, r5                   | R4 - R5 = 0                              | R0=0 R1=0 R2=4 R3=33 R4=52 R5=52 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:    196 RUN  FETCH | PC=0x001C | IR=0x10000034 (jge 0x0034) | R0=0 R1=0 R2=4 R3=33 R4=52 R5=52 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:    197 RUN  EXEC  | PC=0x001C | jge 0x0034                   | taken, PC := 0x0034                      | R0=0 R1=0 R2=4 R3=33 R4=52 R5=52 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:    198 RUN  FETCH | PC=0x0034 | IR=0x13000000 (halt) | R0=0 R1=0 R2=4 R3=33 R4=52 R5=52 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:    199 STOP EXEC  | PC=0x0034 | halt                         | (stop)                                   | R0=0 R1=0 R2=4 R3=33 R4=52 R5=52 R6=0 R7=16384 ZF=1 NF=0	input []
+out_stdout: |2
+
+  --- summary ---
+  ticks executed: 200
+  instructions:   100
+  interrupts:     0
+  output (13 bytes): Hello, world!
+  final regs:     R0=0 R1=0 R2=4 R3=33 R4=52 R5=52 R6=0 R7=16384
+  final flags:    ZF=1 NF=0
+out_output: Hello, world!
+out_listing: |
+  == CODE ==
+  0000 - 0A000004 - jmp 0x0004
+  0004 - 09704000 - li r7, #16384
+  0008 - 09400000 - li r4, #0
+  000C - 07502400 - ld r5, [r0+0x2400]
+  0010 - 09200004 - li r2, #4
+  0014 - 03520000 - mul r5, r2
+  0018 - 06450000 - cmp r4, r5
+  001C - 10000034 - jge 0x0034
+  0020 - 07342404 - ld r3, [r4+0x2404]
+  0024 - 12030001 - out r3, port#1
+  0028 - 09200004 - li r2, #4
+  002C - 01420000 - add r4, r2
+  0030 - 0A000018 - jmp 0x0018
+  0034 - 13000000 - halt
+
+  == DATA ==
+  2400 - 0D000000 - .word 13
+  2404 - 48000000 - .word 72  ; 'H'
+  2408 - 65000000 - .word 101  ; 'e'
+  240C - 6C000000 - .word 108  ; 'l'
+  2410 - 6C000000 - .word 108  ; 'l'
+  2414 - 6F000000 - .word 111  ; 'o'
+  2418 - 2C000000 - .word 44  ; ','
+  241C - 20000000 - .word 32  ; ' '
+  2420 - 77000000 - .word 119  ; 'w'
+  2424 - 6F000000 - .word 111  ; 'o'
+  2428 - 72000000 - .word 114  ; 'r'
+  242C - 6C000000 - .word 108  ; 'l'
+  2430 - 64000000 - .word 100  ; 'd'
+  2434 - 21000000 - .word 33  ; '!'
+out_code: !!binary |
+  CgAABAlwQAAJQAAAB1AkAAkgAAQDUgAABkUAABAAADQHNCQEEgMAAQkgAAQBQgAACgAAGBMAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADQAAAEgAAABlAAAAbAAAAGwA
+  AABvAAAALAAAACAAAAB3AAAAbwAAAHIAAABsAAAAZAAAACEAAAA=

@@ -1,0 +1,1287 @@
+in_source: |
+  // sort: пользователь загружает список через ввод.
+  // Формат (по аналогии с pstr — длина впереди): сначала количество,
+  // затем элементы через пробелы, конец = '\n'. Ввод идёт через прерывания.
+  var data[16]
+  var n = 0          // сколько элементов уже прочитано
+  var count = 0      // объявленная длина списка
+  var have_count = 0 // прочитали ли уже длину
+  var cur = 0        // текущее собираемое число
+  var done = 0
+
+  interrupt function on_key ( ) {
+      var c = port_in ( 0 )
+      if ( c == 32 ) {
+          if ( have_count == 0 ) {
+              count = cur
+              have_count = 1
+          } else {
+              data[n] = cur
+              n = n + 1
+          }
+          cur = 0
+      } else {
+          if ( c == 10 ) {
+              data[n] = cur
+              n = n + 1
+              done = 1
+          } else {
+              cur = cur * 10 + ( c - 48 )
+          }
+      }
+  }
+
+  set_interrupt_handler ( 0 , on_key )
+  enable_interrupts ( )
+  while ( done == 0 ) { }
+  disable_interrupts ( )
+
+  // пузырьковая сортировка data[0..count-1]
+  var i = 0
+  while ( i < count ) {
+      var j = 0
+      while ( j < count - 1 ) {
+          if ( data[j] > data[j + 1] ) {
+              var t = data[j]
+              data[j] = data[j + 1]
+              data[j + 1] = t
+          }
+          j = j + 1
+      }
+      i = i + 1
+  }
+
+  // печать отсортированного списка через пробел
+  var k = 0
+  while ( k < count ) {
+      print_num ( data[k] )
+      if ( k < count - 1 ) { print ( 32 ) }
+      k = k + 1
+  }
+in_log_max_lines: 300
+in_stdin: |
+  2 3
+  6 32
+  8 3
+  10 0
+  12 32
+  14 1
+  16 0
+  18 32
+  20 2
+  22 0
+  24 \n
+out_log: |
+  DEBUG   machine:simulation    TICK:      0 RUN  FETCH | PC=0x0000 | IR=0x0A000004 (jmp 0x0004) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=0 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:      1 RUN  EXEC  | PC=0x0000 | jmp 0x0004                   | PC := 0x0004                             | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=0 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:      2 RUN  FETCH | PC=0x0004 | IR=0x09704000 (li r7, #16384) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=0 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:      3 RUN  EXEC  | PC=0x0004 | li r7, #16384                | R7 := 16384                              | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:      4 RUN  FETCH | PC=0x0008 | IR=0x09100000 (li r1, #0) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:      5 RUN  EXEC  | PC=0x0008 | li r1, #0                    | R1 := 0                                  | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:      6 RUN  FETCH | PC=0x000C | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:      7 RUN  EXEC  | PC=0x000C | st r1, [r7+0x0]              | mem[0x4000] := 0                         | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:      8 RUN  FETCH | PC=0x0010 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:      9 RUN  EXEC  | PC=0x0010 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     10 RUN  FETCH | PC=0x0014 | IR=0x01730000 (add r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     11 RUN  EXEC  | PC=0x0014 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     12 RUN  FETCH | PC=0x0018 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     13 RUN  EXEC  | PC=0x0018 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     14 RUN  FETCH | PC=0x001C | IR=0x02730000 (sub r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     15 RUN  EXEC  | PC=0x001C | sub r7, r3                   | R7 := 16384                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     16 RUN  FETCH | PC=0x0020 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     17 RUN  EXEC  | PC=0x0020 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 0                    | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     18 RUN  FETCH | PC=0x0024 | IR=0x08102048 (st r1, [r0+0x2048]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     19 RUN  EXEC  | PC=0x0024 | st r1, [r0+0x2048]           | mem[0x2048] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     20 RUN  FETCH | PC=0x0028 | IR=0x09100000 (li r1, #0) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     21 RUN  EXEC  | PC=0x0028 | li r1, #0                    | R1 := 0                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     22 RUN  FETCH | PC=0x002C | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     23 RUN  EXEC  | PC=0x002C | st r1, [r7+0x0]              | mem[0x4000] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     24 RUN  FETCH | PC=0x0030 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     25 RUN  EXEC  | PC=0x0030 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     26 RUN  FETCH | PC=0x0034 | IR=0x01730000 (add r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     27 RUN  EXEC  | PC=0x0034 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     28 RUN  FETCH | PC=0x0038 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     29 RUN  EXEC  | PC=0x0038 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     30 RUN  FETCH | PC=0x003C | IR=0x02730000 (sub r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     31 RUN  EXEC  | PC=0x003C | sub r7, r3                   | R7 := 16384                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     32 RUN  FETCH | PC=0x0040 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     33 RUN  EXEC  | PC=0x0040 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 0                    | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     34 RUN  FETCH | PC=0x0044 | IR=0x0810204C (st r1, [r0+0x204C]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     35 RUN  EXEC  | PC=0x0044 | st r1, [r0+0x204C]           | mem[0x204C] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     36 RUN  FETCH | PC=0x0048 | IR=0x09100000 (li r1, #0) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     37 RUN  EXEC  | PC=0x0048 | li r1, #0                    | R1 := 0                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     38 RUN  FETCH | PC=0x004C | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     39 RUN  EXEC  | PC=0x004C | st r1, [r7+0x0]              | mem[0x4000] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     40 RUN  FETCH | PC=0x0050 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     41 RUN  EXEC  | PC=0x0050 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     42 RUN  FETCH | PC=0x0054 | IR=0x01730000 (add r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     43 RUN  EXEC  | PC=0x0054 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     44 RUN  FETCH | PC=0x0058 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     45 RUN  EXEC  | PC=0x0058 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     46 RUN  FETCH | PC=0x005C | IR=0x02730000 (sub r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     47 RUN  EXEC  | PC=0x005C | sub r7, r3                   | R7 := 16384                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     48 RUN  FETCH | PC=0x0060 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     49 RUN  EXEC  | PC=0x0060 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 0                    | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     50 RUN  FETCH | PC=0x0064 | IR=0x08102050 (st r1, [r0+0x2050]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     51 RUN  EXEC  | PC=0x0064 | st r1, [r0+0x2050]           | mem[0x2050] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     52 RUN  FETCH | PC=0x0068 | IR=0x09100000 (li r1, #0) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     53 RUN  EXEC  | PC=0x0068 | li r1, #0                    | R1 := 0                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     54 RUN  FETCH | PC=0x006C | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     55 RUN  EXEC  | PC=0x006C | st r1, [r7+0x0]              | mem[0x4000] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     56 RUN  FETCH | PC=0x0070 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     57 RUN  EXEC  | PC=0x0070 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     58 RUN  FETCH | PC=0x0074 | IR=0x01730000 (add r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     59 RUN  EXEC  | PC=0x0074 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     60 RUN  FETCH | PC=0x0078 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     61 RUN  EXEC  | PC=0x0078 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     62 RUN  FETCH | PC=0x007C | IR=0x02730000 (sub r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     63 RUN  EXEC  | PC=0x007C | sub r7, r3                   | R7 := 16384                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     64 RUN  FETCH | PC=0x0080 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     65 RUN  EXEC  | PC=0x0080 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 0                    | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     66 RUN  FETCH | PC=0x0084 | IR=0x08102054 (st r1, [r0+0x2054]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     67 RUN  EXEC  | PC=0x0084 | st r1, [r0+0x2054]           | mem[0x2054] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     68 RUN  FETCH | PC=0x0088 | IR=0x09100000 (li r1, #0) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     69 RUN  EXEC  | PC=0x0088 | li r1, #0                    | R1 := 0                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     70 RUN  FETCH | PC=0x008C | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     71 RUN  EXEC  | PC=0x008C | st r1, [r7+0x0]              | mem[0x4000] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     72 RUN  FETCH | PC=0x0090 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     73 RUN  EXEC  | PC=0x0090 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     74 RUN  FETCH | PC=0x0094 | IR=0x01730000 (add r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     75 RUN  EXEC  | PC=0x0094 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     76 RUN  FETCH | PC=0x0098 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     77 RUN  EXEC  | PC=0x0098 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     78 RUN  FETCH | PC=0x009C | IR=0x02730000 (sub r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     79 RUN  EXEC  | PC=0x009C | sub r7, r3                   | R7 := 16384                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     80 RUN  FETCH | PC=0x00A0 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     81 RUN  EXEC  | PC=0x00A0 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 0                    | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     82 RUN  FETCH | PC=0x00A4 | IR=0x08102058 (st r1, [r0+0x2058]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     83 RUN  EXEC  | PC=0x00A4 | st r1, [r0+0x2058]           | mem[0x2058] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     84 RUN  FETCH | PC=0x00A8 | IR=0x09100000 (li r1, #0) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     85 RUN  EXEC  | PC=0x00A8 | li r1, #0                    | R1 := 0                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     86 RUN  FETCH | PC=0x00AC | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     87 RUN  EXEC  | PC=0x00AC | st r1, [r7+0x0]              | mem[0x4000] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     88 RUN  FETCH | PC=0x00B0 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     89 RUN  EXEC  | PC=0x00B0 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     90 RUN  FETCH | PC=0x00B4 | IR=0x01730000 (add r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     91 RUN  EXEC  | PC=0x00B4 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     92 RUN  FETCH | PC=0x00B8 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     93 RUN  EXEC  | PC=0x00B8 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     94 RUN  FETCH | PC=0x00BC | IR=0x02730000 (sub r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     95 RUN  EXEC  | PC=0x00BC | sub r7, r3                   | R7 := 16384                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     96 RUN  FETCH | PC=0x00C0 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     97 RUN  EXEC  | PC=0x00C0 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 0                    | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     98 RUN  FETCH | PC=0x00C4 | IR=0x09200004 (li r2, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:     99 RUN  EXEC  | PC=0x00C4 | li r2, #4                    | R2 := 4                                  | R0=0 R1=0 R2=4 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    100 RUN  FETCH | PC=0x00C8 | IR=0x03120000 (mul r1, r2) | R0=0 R1=0 R2=4 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    101 RUN  EXEC  | PC=0x00C8 | mul r1, r2                   | R1 := 0                                  | R0=0 R1=0 R2=4 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    102 RUN  FETCH | PC=0x00CC | IR=0x092022F0 (li r2, #8944) | R0=0 R1=0 R2=4 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    103 RUN  EXEC  | PC=0x00CC | li r2, #8944                 | R2 := 8944                               | R0=0 R1=0 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    104 RUN  FETCH | PC=0x00D0 | IR=0x01120000 (add r1, r2) | R0=0 R1=0 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    105 RUN  EXEC  | PC=0x00D0 | add r1, r2                   | R1 := 8944                               | R0=0 R1=8944 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    106 RUN  FETCH | PC=0x00D4 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=8944 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    107 RUN  EXEC  | PC=0x00D4 | st r1, [r7+0x0]              | mem[0x4000] := 8944                      | R0=0 R1=8944 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    108 RUN  FETCH | PC=0x00D8 | IR=0x09300004 (li r3, #4) | R0=0 R1=8944 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    109 RUN  EXEC  | PC=0x00D8 | li r3, #4                    | R3 := 4                                  | R0=0 R1=8944 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    110 RUN  FETCH | PC=0x00DC | IR=0x01730000 (add r7, r3) | R0=0 R1=8944 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    111 RUN  EXEC  | PC=0x00DC | add r7, r3                   | R7 := 16388                              | R0=0 R1=8944 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    112 RUN  FETCH | PC=0x00E0 | IR=0x09100910 (li r1, #2320) | R0=0 R1=8944 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    113 RUN  EXEC  | PC=0x00E0 | li r1, #2320                 | R1 := 2320                               | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    114 RUN  FETCH | PC=0x00E4 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    115 RUN  EXEC  | PC=0x00E4 | st r1, [r7+0x0]              | mem[0x4004] := 2320                      | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    116 RUN  FETCH | PC=0x00E8 | IR=0x09300004 (li r3, #4) | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    117 RUN  EXEC  | PC=0x00E8 | li r3, #4                    | R3 := 4                                  | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    118 RUN  FETCH | PC=0x00EC | IR=0x01730000 (add r7, r3) | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    119 RUN  EXEC  | PC=0x00EC | add r7, r3                   | R7 := 16392                              | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    120 RUN  FETCH | PC=0x00F0 | IR=0x09300004 (li r3, #4) | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    121 RUN  EXEC  | PC=0x00F0 | li r3, #4                    | R3 := 4                                  | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    122 RUN  FETCH | PC=0x00F4 | IR=0x02730000 (sub r7, r3) | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    123 RUN  EXEC  | PC=0x00F4 | sub r7, r3                   | R7 := 16388                              | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    124 RUN  FETCH | PC=0x00F8 | IR=0x07270000 (ld r2, [r7+0x0]) | R0=0 R1=2320 R2=8944 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    125 RUN  EXEC  | PC=0x00F8 | ld r2, [r7+0x0]              | R2 := mem[0x4004] = 2320                 | R0=0 R1=2320 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    126 RUN  FETCH | PC=0x00FC | IR=0x09300004 (li r3, #4) | R0=0 R1=2320 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    127 RUN  EXEC  | PC=0x00FC | li r3, #4                    | R3 := 4                                  | R0=0 R1=2320 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    128 RUN  FETCH | PC=0x0100 | IR=0x02730000 (sub r7, r3) | R0=0 R1=2320 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    129 RUN  EXEC  | PC=0x0100 | sub r7, r3                   | R7 := 16384                              | R0=0 R1=2320 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    130 RUN  FETCH | PC=0x0104 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=2320 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    131 RUN  EXEC  | PC=0x0104 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 8944                 | R0=0 R1=8944 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    132 RUN  FETCH | PC=0x0108 | IR=0x08210000 (st r2, [r1+0x0]) | R0=0 R1=8944 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    133 RUN  EXEC  | PC=0x0108 | st r2, [r1+0x0]              | mem[0x22F0] := 2320                      | R0=0 R1=8944 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    134 RUN  FETCH | PC=0x010C | IR=0x09100000 (li r1, #0) | R0=0 R1=8944 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    135 RUN  EXEC  | PC=0x010C | li r1, #0                    | R1 := 0                                  | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    136 RUN  FETCH | PC=0x0110 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    137 RUN  EXEC  | PC=0x0110 | st r1, [r7+0x0]              | mem[0x4000] := 0                         | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    138 RUN  FETCH | PC=0x0114 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    139 RUN  EXEC  | PC=0x0114 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    140 RUN  FETCH | PC=0x0118 | IR=0x01730000 (add r7, r3) | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    141 RUN  EXEC  | PC=0x0118 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    142 RUN  FETCH | PC=0x011C | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    143 RUN  EXEC  | PC=0x011C | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    144 RUN  FETCH | PC=0x0120 | IR=0x02730000 (sub r7, r3) | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    145 RUN  EXEC  | PC=0x0120 | sub r7, r3                   | R7 := 16384                              | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    146 RUN  FETCH | PC=0x0124 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    147 RUN  EXEC  | PC=0x0124 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 0                    | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    148 RUN  FETCH | PC=0x0128 | IR=0x15000000 (ei) | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    149 RUN  EXEC  | PC=0x0128 | ei                           | interrupts enabled                       | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [2, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    150 INT  TRAP  | interrupt vec=0: saved_pc=0x012C, handler=0x0910, port#0<=0x33 ('3') | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    151 INT  FETCH | PC=0x0910 | IR=0x11100000 (in r1, port#0) | R0=0 R1=0 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    152 INT  EXEC  | PC=0x0910 | in r1, port#0                | R1 := port#0 = 0x33 ('3')                | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    153 INT  FETCH | PC=0x0914 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    154 INT  EXEC  | PC=0x0914 | st r1, [r7+0x0]              | mem[0x4000] := 51                        | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    155 INT  FETCH | PC=0x0918 | IR=0x09300004 (li r3, #4) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    156 INT  EXEC  | PC=0x0918 | li r3, #4                    | R3 := 4                                  | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    157 INT  FETCH | PC=0x091C | IR=0x01730000 (add r7, r3) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    158 INT  EXEC  | PC=0x091C | add r7, r3                   | R7 := 16388                              | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    159 INT  FETCH | PC=0x0920 | IR=0x09300004 (li r3, #4) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    160 INT  EXEC  | PC=0x0920 | li r3, #4                    | R3 := 4                                  | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    161 INT  FETCH | PC=0x0924 | IR=0x02730000 (sub r7, r3) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    162 INT  EXEC  | PC=0x0924 | sub r7, r3                   | R7 := 16384                              | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    163 INT  FETCH | PC=0x0928 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    164 INT  EXEC  | PC=0x0928 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 51                   | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    165 INT  FETCH | PC=0x092C | IR=0x0810206C (st r1, [r0+0x206C]) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    166 INT  EXEC  | PC=0x092C | st r1, [r0+0x206C]           | mem[0x206C] := 51                        | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    167 INT  FETCH | PC=0x0930 | IR=0x0710206C (ld r1, [r0+0x206C]) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    168 INT  EXEC  | PC=0x0930 | ld r1, [r0+0x206C]           | R1 := mem[0x206C] = 51                   | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    169 INT  FETCH | PC=0x0934 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    170 INT  EXEC  | PC=0x0934 | st r1, [r7+0x0]              | mem[0x4000] := 51                        | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    171 INT  FETCH | PC=0x0938 | IR=0x09300004 (li r3, #4) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    172 INT  EXEC  | PC=0x0938 | li r3, #4                    | R3 := 4                                  | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    173 INT  FETCH | PC=0x093C | IR=0x01730000 (add r7, r3) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    174 INT  EXEC  | PC=0x093C | add r7, r3                   | R7 := 16388                              | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    175 INT  FETCH | PC=0x0940 | IR=0x09100020 (li r1, #32) | R0=0 R1=51 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    176 INT  EXEC  | PC=0x0940 | li r1, #32                   | R1 := 32                                 | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    177 INT  FETCH | PC=0x0944 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    178 INT  EXEC  | PC=0x0944 | st r1, [r7+0x0]              | mem[0x4004] := 32                        | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    179 INT  FETCH | PC=0x0948 | IR=0x09300004 (li r3, #4) | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    180 INT  EXEC  | PC=0x0948 | li r3, #4                    | R3 := 4                                  | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    181 INT  FETCH | PC=0x094C | IR=0x01730000 (add r7, r3) | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    182 INT  EXEC  | PC=0x094C | add r7, r3                   | R7 := 16392                              | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    183 INT  FETCH | PC=0x0950 | IR=0x09300004 (li r3, #4) | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    184 INT  EXEC  | PC=0x0950 | li r3, #4                    | R3 := 4                                  | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    185 INT  FETCH | PC=0x0954 | IR=0x02730000 (sub r7, r3) | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    186 INT  EXEC  | PC=0x0954 | sub r7, r3                   | R7 := 16388                              | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    187 INT  FETCH | PC=0x0958 | IR=0x07270000 (ld r2, [r7+0x0]) | R0=0 R1=32 R2=2320 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    188 INT  EXEC  | PC=0x0958 | ld r2, [r7+0x0]              | R2 := mem[0x4004] = 32                   | R0=0 R1=32 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    189 INT  FETCH | PC=0x095C | IR=0x09300004 (li r3, #4) | R0=0 R1=32 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    190 INT  EXEC  | PC=0x095C | li r3, #4                    | R3 := 4                                  | R0=0 R1=32 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    191 INT  FETCH | PC=0x0960 | IR=0x02730000 (sub r7, r3) | R0=0 R1=32 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    192 INT  EXEC  | PC=0x0960 | sub r7, r3                   | R7 := 16384                              | R0=0 R1=32 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    193 INT  FETCH | PC=0x0964 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=32 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    194 INT  EXEC  | PC=0x0964 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 51                   | R0=0 R1=51 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    195 INT  FETCH | PC=0x0968 | IR=0x06120000 (cmp r1, r2) | R0=0 R1=51 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    196 INT  EXEC  | PC=0x0968 | cmp r1, r2                   | R1 - R2 = 19                             | R0=0 R1=51 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    197 INT  FETCH | PC=0x096C | IR=0x0B000978 (jz 0x0978) | R0=0 R1=51 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    198 INT  EXEC  | PC=0x096C | jz 0x0978                    | not taken                                | R0=0 R1=51 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    199 INT  FETCH | PC=0x0970 | IR=0x09100000 (li r1, #0) | R0=0 R1=51 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    200 INT  EXEC  | PC=0x0970 | li r1, #0                    | R1 := 0                                  | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    201 INT  FETCH | PC=0x0974 | IR=0x0A00097C (jmp 0x097C) | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    202 INT  EXEC  | PC=0x0974 | jmp 0x097C                   | PC := 0x097C                             | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    203 INT  FETCH | PC=0x097C | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    204 INT  EXEC  | PC=0x097C | st r1, [r7+0x0]              | mem[0x4000] := 0                         | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    205 INT  FETCH | PC=0x0980 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    206 INT  EXEC  | PC=0x0980 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    207 INT  FETCH | PC=0x0984 | IR=0x01730000 (add r7, r3) | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    208 INT  EXEC  | PC=0x0984 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    209 INT  FETCH | PC=0x0988 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    210 INT  EXEC  | PC=0x0988 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    211 INT  FETCH | PC=0x098C | IR=0x02730000 (sub r7, r3) | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    212 INT  EXEC  | PC=0x098C | sub r7, r3                   | R7 := 16384                              | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    213 INT  FETCH | PC=0x0990 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    214 INT  EXEC  | PC=0x0990 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 0                    | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    215 INT  FETCH | PC=0x0994 | IR=0x09200000 (li r2, #0) | R0=0 R1=0 R2=32 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    216 INT  EXEC  | PC=0x0994 | li r2, #0                    | R2 := 0                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    217 INT  FETCH | PC=0x0998 | IR=0x06120000 (cmp r1, r2) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    218 INT  EXEC  | PC=0x0998 | cmp r1, r2                   | R1 - R2 = 0                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    219 INT  FETCH | PC=0x099C | IR=0x0B000B1C (jz 0x0B1C) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    220 INT  EXEC  | PC=0x099C | jz 0x0B1C                    | taken, PC := 0x0B1C                      | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    221 INT  FETCH | PC=0x0B1C | IR=0x0710206C (ld r1, [r0+0x206C]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    222 INT  EXEC  | PC=0x0B1C | ld r1, [r0+0x206C]           | R1 := mem[0x206C] = 51                   | R0=0 R1=51 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    223 INT  FETCH | PC=0x0B20 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=51 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    224 INT  EXEC  | PC=0x0B20 | st r1, [r7+0x0]              | mem[0x4000] := 51                        | R0=0 R1=51 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    225 INT  FETCH | PC=0x0B24 | IR=0x09300004 (li r3, #4) | R0=0 R1=51 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    226 INT  EXEC  | PC=0x0B24 | li r3, #4                    | R3 := 4                                  | R0=0 R1=51 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    227 INT  FETCH | PC=0x0B28 | IR=0x01730000 (add r7, r3) | R0=0 R1=51 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    228 INT  EXEC  | PC=0x0B28 | add r7, r3                   | R7 := 16388                              | R0=0 R1=51 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    229 INT  FETCH | PC=0x0B2C | IR=0x0910000A (li r1, #10) | R0=0 R1=51 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    230 INT  EXEC  | PC=0x0B2C | li r1, #10                   | R1 := 10                                 | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    231 INT  FETCH | PC=0x0B30 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    232 INT  EXEC  | PC=0x0B30 | st r1, [r7+0x0]              | mem[0x4004] := 10                        | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    233 INT  FETCH | PC=0x0B34 | IR=0x09300004 (li r3, #4) | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    234 INT  EXEC  | PC=0x0B34 | li r3, #4                    | R3 := 4                                  | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    235 INT  FETCH | PC=0x0B38 | IR=0x01730000 (add r7, r3) | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    236 INT  EXEC  | PC=0x0B38 | add r7, r3                   | R7 := 16392                              | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    237 INT  FETCH | PC=0x0B3C | IR=0x09300004 (li r3, #4) | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    238 INT  EXEC  | PC=0x0B3C | li r3, #4                    | R3 := 4                                  | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    239 INT  FETCH | PC=0x0B40 | IR=0x02730000 (sub r7, r3) | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    240 INT  EXEC  | PC=0x0B40 | sub r7, r3                   | R7 := 16388                              | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    241 INT  FETCH | PC=0x0B44 | IR=0x07270000 (ld r2, [r7+0x0]) | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    242 INT  EXEC  | PC=0x0B44 | ld r2, [r7+0x0]              | R2 := mem[0x4004] = 10                   | R0=0 R1=10 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    243 INT  FETCH | PC=0x0B48 | IR=0x09300004 (li r3, #4) | R0=0 R1=10 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    244 INT  EXEC  | PC=0x0B48 | li r3, #4                    | R3 := 4                                  | R0=0 R1=10 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    245 INT  FETCH | PC=0x0B4C | IR=0x02730000 (sub r7, r3) | R0=0 R1=10 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    246 INT  EXEC  | PC=0x0B4C | sub r7, r3                   | R7 := 16384                              | R0=0 R1=10 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    247 INT  FETCH | PC=0x0B50 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=10 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    248 INT  EXEC  | PC=0x0B50 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 51                   | R0=0 R1=51 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    249 INT  FETCH | PC=0x0B54 | IR=0x06120000 (cmp r1, r2) | R0=0 R1=51 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    250 INT  EXEC  | PC=0x0B54 | cmp r1, r2                   | R1 - R2 = 41                             | R0=0 R1=51 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    251 INT  FETCH | PC=0x0B58 | IR=0x0B000B64 (jz 0x0B64) | R0=0 R1=51 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    252 INT  EXEC  | PC=0x0B58 | jz 0x0B64                    | not taken                                | R0=0 R1=51 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    253 INT  FETCH | PC=0x0B5C | IR=0x09100000 (li r1, #0) | R0=0 R1=51 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    254 INT  EXEC  | PC=0x0B5C | li r1, #0                    | R1 := 0                                  | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    255 INT  FETCH | PC=0x0B60 | IR=0x0A000B68 (jmp 0x0B68) | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    256 INT  EXEC  | PC=0x0B60 | jmp 0x0B68                   | PC := 0x0B68                             | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    257 INT  FETCH | PC=0x0B68 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    258 INT  EXEC  | PC=0x0B68 | st r1, [r7+0x0]              | mem[0x4000] := 0                         | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    259 INT  FETCH | PC=0x0B6C | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    260 INT  EXEC  | PC=0x0B6C | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    261 INT  FETCH | PC=0x0B70 | IR=0x01730000 (add r7, r3) | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    262 INT  EXEC  | PC=0x0B70 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    263 INT  FETCH | PC=0x0B74 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    264 INT  EXEC  | PC=0x0B74 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    265 INT  FETCH | PC=0x0B78 | IR=0x02730000 (sub r7, r3) | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    266 INT  EXEC  | PC=0x0B78 | sub r7, r3                   | R7 := 16384                              | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    267 INT  FETCH | PC=0x0B7C | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    268 INT  EXEC  | PC=0x0B7C | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 0                    | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    269 INT  FETCH | PC=0x0B80 | IR=0x09200000 (li r2, #0) | R0=0 R1=0 R2=10 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    270 INT  EXEC  | PC=0x0B80 | li r2, #0                    | R2 := 0                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    271 INT  FETCH | PC=0x0B84 | IR=0x06120000 (cmp r1, r2) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    272 INT  EXEC  | PC=0x0B84 | cmp r1, r2                   | R1 - R2 = 0                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    273 INT  FETCH | PC=0x0B88 | IR=0x0B000C54 (jz 0x0C54) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    274 INT  EXEC  | PC=0x0B88 | jz 0x0C54                    | taken, PC := 0x0C54                      | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    275 INT  FETCH | PC=0x0C54 | IR=0x07102054 (ld r1, [r0+0x2054]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    276 INT  EXEC  | PC=0x0C54 | ld r1, [r0+0x2054]           | R1 := mem[0x2054] = 0                    | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    277 INT  FETCH | PC=0x0C58 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    278 INT  EXEC  | PC=0x0C58 | st r1, [r7+0x0]              | mem[0x4000] := 0                         | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    279 INT  FETCH | PC=0x0C5C | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    280 INT  EXEC  | PC=0x0C5C | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    281 INT  FETCH | PC=0x0C60 | IR=0x01730000 (add r7, r3) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    282 INT  EXEC  | PC=0x0C60 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    283 INT  FETCH | PC=0x0C64 | IR=0x0910000A (li r1, #10) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  DEBUG   machine:simulation    TICK:    284 INT  EXEC  | PC=0x0C64 | li r1, #10                   | R1 := 10                                 | R0=0 R1=10 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+  ... (пропущено 6033 строк журнала) ...
+  DEBUG   machine:simulation    TICK:   6318 RUN  EXEC  | PC=0x06E4 | add r7, r3                   | R7 := 16388                              | R0=0 R1=0 R2=3 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6319 RUN  FETCH | PC=0x06E8 | IR=0x09300004 (li r3, #4) | R0=0 R1=0 R2=3 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6320 RUN  EXEC  | PC=0x06E8 | li r3, #4                    | R3 := 4                                  | R0=0 R1=0 R2=3 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6321 RUN  FETCH | PC=0x06EC | IR=0x02730000 (sub r7, r3) | R0=0 R1=0 R2=3 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6322 RUN  EXEC  | PC=0x06EC | sub r7, r3                   | R7 := 16384                              | R0=0 R1=0 R2=3 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6323 RUN  FETCH | PC=0x06F0 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=0 R2=3 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6324 RUN  EXEC  | PC=0x06F0 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 0                    | R0=0 R1=0 R2=3 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6325 RUN  FETCH | PC=0x06F4 | IR=0x09200000 (li r2, #0) | R0=0 R1=0 R2=3 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6326 RUN  EXEC  | PC=0x06F4 | li r2, #0                    | R2 := 0                                  | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6327 RUN  FETCH | PC=0x06F8 | IR=0x06120000 (cmp r1, r2) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6328 RUN  EXEC  | PC=0x06F8 | cmp r1, r2                   | R1 - R2 = 0                              | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6329 RUN  FETCH | PC=0x06FC | IR=0x0B00090C (jz 0x090C) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6330 RUN  EXEC  | PC=0x06FC | jz 0x090C                    | taken, PC := 0x090C                      | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6331 RUN  FETCH | PC=0x090C | IR=0x13000000 (halt) | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   6332 STOP EXEC  | PC=0x090C | halt                         | (stop)                                   | R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=1 NF=0	input []
+out_stdout: |2
+
+  --- summary ---
+  ticks executed: 6333
+  instructions:   3161
+  interrupts:     11
+  output (8 bytes): 10 20 30
+  final regs:     R0=0 R1=0 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384
+  final flags:    ZF=1 NF=0
+out_output: 10 20 30
+out_listing: |
+  == CODE ==
+  0000 - 0A000004 - jmp 0x0004
+  0004 - 09704000 - li r7, #16384
+  0008 - 09100000 - li r1, #0
+  000C - 08170000 - st r1, [r7+0x0]
+  0010 - 09300004 - li r3, #4
+  0014 - 01730000 - add r7, r3
+  0018 - 09300004 - li r3, #4
+  001C - 02730000 - sub r7, r3
+  0020 - 07170000 - ld r1, [r7+0x0]
+  0024 - 08102048 - st r1, [r0+0x2048]
+  0028 - 09100000 - li r1, #0
+  002C - 08170000 - st r1, [r7+0x0]
+  0030 - 09300004 - li r3, #4
+  0034 - 01730000 - add r7, r3
+  0038 - 09300004 - li r3, #4
+  003C - 02730000 - sub r7, r3
+  0040 - 07170000 - ld r1, [r7+0x0]
+  0044 - 0810204C - st r1, [r0+0x204C]
+  0048 - 09100000 - li r1, #0
+  004C - 08170000 - st r1, [r7+0x0]
+  0050 - 09300004 - li r3, #4
+  0054 - 01730000 - add r7, r3
+  0058 - 09300004 - li r3, #4
+  005C - 02730000 - sub r7, r3
+  0060 - 07170000 - ld r1, [r7+0x0]
+  0064 - 08102050 - st r1, [r0+0x2050]
+  0068 - 09100000 - li r1, #0
+  006C - 08170000 - st r1, [r7+0x0]
+  0070 - 09300004 - li r3, #4
+  0074 - 01730000 - add r7, r3
+  0078 - 09300004 - li r3, #4
+  007C - 02730000 - sub r7, r3
+  0080 - 07170000 - ld r1, [r7+0x0]
+  0084 - 08102054 - st r1, [r0+0x2054]
+  0088 - 09100000 - li r1, #0
+  008C - 08170000 - st r1, [r7+0x0]
+  0090 - 09300004 - li r3, #4
+  0094 - 01730000 - add r7, r3
+  0098 - 09300004 - li r3, #4
+  009C - 02730000 - sub r7, r3
+  00A0 - 07170000 - ld r1, [r7+0x0]
+  00A4 - 08102058 - st r1, [r0+0x2058]
+  00A8 - 09100000 - li r1, #0
+  00AC - 08170000 - st r1, [r7+0x0]
+  00B0 - 09300004 - li r3, #4
+  00B4 - 01730000 - add r7, r3
+  00B8 - 09300004 - li r3, #4
+  00BC - 02730000 - sub r7, r3
+  00C0 - 07170000 - ld r1, [r7+0x0]
+  00C4 - 09200004 - li r2, #4
+  00C8 - 03120000 - mul r1, r2
+  00CC - 092022F0 - li r2, #8944
+  00D0 - 01120000 - add r1, r2
+  00D4 - 08170000 - st r1, [r7+0x0]
+  00D8 - 09300004 - li r3, #4
+  00DC - 01730000 - add r7, r3
+  00E0 - 09100910 - li r1, #2320
+  00E4 - 08170000 - st r1, [r7+0x0]
+  00E8 - 09300004 - li r3, #4
+  00EC - 01730000 - add r7, r3
+  00F0 - 09300004 - li r3, #4
+  00F4 - 02730000 - sub r7, r3
+  00F8 - 07270000 - ld r2, [r7+0x0]
+  00FC - 09300004 - li r3, #4
+  0100 - 02730000 - sub r7, r3
+  0104 - 07170000 - ld r1, [r7+0x0]
+  0108 - 08210000 - st r2, [r1+0x0]
+  010C - 09100000 - li r1, #0
+  0110 - 08170000 - st r1, [r7+0x0]
+  0114 - 09300004 - li r3, #4
+  0118 - 01730000 - add r7, r3
+  011C - 09300004 - li r3, #4
+  0120 - 02730000 - sub r7, r3
+  0124 - 07170000 - ld r1, [r7+0x0]
+  0128 - 15000000 - ei
+  012C - 09100000 - li r1, #0
+  0130 - 08170000 - st r1, [r7+0x0]
+  0134 - 09300004 - li r3, #4
+  0138 - 01730000 - add r7, r3
+  013C - 09300004 - li r3, #4
+  0140 - 02730000 - sub r7, r3
+  0144 - 07170000 - ld r1, [r7+0x0]
+  0148 - 07102058 - ld r1, [r0+0x2058]
+  014C - 08170000 - st r1, [r7+0x0]
+  0150 - 09300004 - li r3, #4
+  0154 - 01730000 - add r7, r3
+  0158 - 09100000 - li r1, #0
+  015C - 08170000 - st r1, [r7+0x0]
+  0160 - 09300004 - li r3, #4
+  0164 - 01730000 - add r7, r3
+  0168 - 09300004 - li r3, #4
+  016C - 02730000 - sub r7, r3
+  0170 - 07270000 - ld r2, [r7+0x0]
+  0174 - 09300004 - li r3, #4
+  0178 - 02730000 - sub r7, r3
+  017C - 07170000 - ld r1, [r7+0x0]
+  0180 - 06120000 - cmp r1, r2
+  0184 - 0B000190 - jz 0x0190
+  0188 - 09100000 - li r1, #0
+  018C - 0A000194 - jmp 0x0194
+  0190 - 09100001 - li r1, #1
+  0194 - 08170000 - st r1, [r7+0x0]
+  0198 - 09300004 - li r3, #4
+  019C - 01730000 - add r7, r3
+  01A0 - 09300004 - li r3, #4
+  01A4 - 02730000 - sub r7, r3
+  01A8 - 07170000 - ld r1, [r7+0x0]
+  01AC - 09200000 - li r2, #0
+  01B0 - 06120000 - cmp r1, r2
+  01B4 - 0B0001BC - jz 0x01BC
+  01B8 - 0A000148 - jmp 0x0148
+  01BC - 16000000 - di
+  01C0 - 09100000 - li r1, #0
+  01C4 - 08170000 - st r1, [r7+0x0]
+  01C8 - 09300004 - li r3, #4
+  01CC - 01730000 - add r7, r3
+  01D0 - 09300004 - li r3, #4
+  01D4 - 02730000 - sub r7, r3
+  01D8 - 07170000 - ld r1, [r7+0x0]
+  01DC - 09100000 - li r1, #0
+  01E0 - 08170000 - st r1, [r7+0x0]
+  01E4 - 09300004 - li r3, #4
+  01E8 - 01730000 - add r7, r3
+  01EC - 09300004 - li r3, #4
+  01F0 - 02730000 - sub r7, r3
+  01F4 - 07170000 - ld r1, [r7+0x0]
+  01F8 - 0810205C - st r1, [r0+0x205C]
+  01FC - 0710205C - ld r1, [r0+0x205C]
+  0200 - 08170000 - st r1, [r7+0x0]
+  0204 - 09300004 - li r3, #4
+  0208 - 01730000 - add r7, r3
+  020C - 0710204C - ld r1, [r0+0x204C]
+  0210 - 08170000 - st r1, [r7+0x0]
+  0214 - 09300004 - li r3, #4
+  0218 - 01730000 - add r7, r3
+  021C - 09300004 - li r3, #4
+  0220 - 02730000 - sub r7, r3
+  0224 - 07270000 - ld r2, [r7+0x0]
+  0228 - 09300004 - li r3, #4
+  022C - 02730000 - sub r7, r3
+  0230 - 07170000 - ld r1, [r7+0x0]
+  0234 - 06120000 - cmp r1, r2
+  0238 - 0D000244 - jl 0x0244
+  023C - 09100000 - li r1, #0
+  0240 - 0A000248 - jmp 0x0248
+  0244 - 09100001 - li r1, #1
+  0248 - 08170000 - st r1, [r7+0x0]
+  024C - 09300004 - li r3, #4
+  0250 - 01730000 - add r7, r3
+  0254 - 09300004 - li r3, #4
+  0258 - 02730000 - sub r7, r3
+  025C - 07170000 - ld r1, [r7+0x0]
+  0260 - 09200000 - li r2, #0
+  0264 - 06120000 - cmp r1, r2
+  0268 - 0B000670 - jz 0x0670
+  026C - 09100000 - li r1, #0
+  0270 - 08170000 - st r1, [r7+0x0]
+  0274 - 09300004 - li r3, #4
+  0278 - 01730000 - add r7, r3
+  027C - 09300004 - li r3, #4
+  0280 - 02730000 - sub r7, r3
+  0284 - 07170000 - ld r1, [r7+0x0]
+  0288 - 08102060 - st r1, [r0+0x2060]
+  028C - 07102060 - ld r1, [r0+0x2060]
+  0290 - 08170000 - st r1, [r7+0x0]
+  0294 - 09300004 - li r3, #4
+  0298 - 01730000 - add r7, r3
+  029C - 0710204C - ld r1, [r0+0x204C]
+  02A0 - 08170000 - st r1, [r7+0x0]
+  02A4 - 09300004 - li r3, #4
+  02A8 - 01730000 - add r7, r3
+  02AC - 09100001 - li r1, #1
+  02B0 - 08170000 - st r1, [r7+0x0]
+  02B4 - 09300004 - li r3, #4
+  02B8 - 01730000 - add r7, r3
+  02BC - 09300004 - li r3, #4
+  02C0 - 02730000 - sub r7, r3
+  02C4 - 07270000 - ld r2, [r7+0x0]
+  02C8 - 09300004 - li r3, #4
+  02CC - 02730000 - sub r7, r3
+  02D0 - 07170000 - ld r1, [r7+0x0]
+  02D4 - 02120000 - sub r1, r2
+  02D8 - 08170000 - st r1, [r7+0x0]
+  02DC - 09300004 - li r3, #4
+  02E0 - 01730000 - add r7, r3
+  02E4 - 09300004 - li r3, #4
+  02E8 - 02730000 - sub r7, r3
+  02EC - 07270000 - ld r2, [r7+0x0]
+  02F0 - 09300004 - li r3, #4
+  02F4 - 02730000 - sub r7, r3
+  02F8 - 07170000 - ld r1, [r7+0x0]
+  02FC - 06120000 - cmp r1, r2
+  0300 - 0D00030C - jl 0x030C
+  0304 - 09100000 - li r1, #0
+  0308 - 0A000310 - jmp 0x0310
+  030C - 09100001 - li r1, #1
+  0310 - 08170000 - st r1, [r7+0x0]
+  0314 - 09300004 - li r3, #4
+  0318 - 01730000 - add r7, r3
+  031C - 09300004 - li r3, #4
+  0320 - 02730000 - sub r7, r3
+  0324 - 07170000 - ld r1, [r7+0x0]
+  0328 - 09200000 - li r2, #0
+  032C - 06120000 - cmp r1, r2
+  0330 - 0B000614 - jz 0x0614
+  0334 - 07102060 - ld r1, [r0+0x2060]
+  0338 - 08170000 - st r1, [r7+0x0]
+  033C - 09300004 - li r3, #4
+  0340 - 01730000 - add r7, r3
+  0344 - 09300004 - li r3, #4
+  0348 - 02730000 - sub r7, r3
+  034C - 07170000 - ld r1, [r7+0x0]
+  0350 - 09200004 - li r2, #4
+  0354 - 03120000 - mul r1, r2
+  0358 - 09202008 - li r2, #8200
+  035C - 01120000 - add r1, r2
+  0360 - 07110000 - ld r1, [r1+0x0]
+  0364 - 08170000 - st r1, [r7+0x0]
+  0368 - 09300004 - li r3, #4
+  036C - 01730000 - add r7, r3
+  0370 - 07102060 - ld r1, [r0+0x2060]
+  0374 - 08170000 - st r1, [r7+0x0]
+  0378 - 09300004 - li r3, #4
+  037C - 01730000 - add r7, r3
+  0380 - 09100001 - li r1, #1
+  0384 - 08170000 - st r1, [r7+0x0]
+  0388 - 09300004 - li r3, #4
+  038C - 01730000 - add r7, r3
+  0390 - 09300004 - li r3, #4
+  0394 - 02730000 - sub r7, r3
+  0398 - 07270000 - ld r2, [r7+0x0]
+  039C - 09300004 - li r3, #4
+  03A0 - 02730000 - sub r7, r3
+  03A4 - 07170000 - ld r1, [r7+0x0]
+  03A8 - 01120000 - add r1, r2
+  03AC - 08170000 - st r1, [r7+0x0]
+  03B0 - 09300004 - li r3, #4
+  03B4 - 01730000 - add r7, r3
+  03B8 - 09300004 - li r3, #4
+  03BC - 02730000 - sub r7, r3
+  03C0 - 07170000 - ld r1, [r7+0x0]
+  03C4 - 09200004 - li r2, #4
+  03C8 - 03120000 - mul r1, r2
+  03CC - 09202008 - li r2, #8200
+  03D0 - 01120000 - add r1, r2
+  03D4 - 07110000 - ld r1, [r1+0x0]
+  03D8 - 08170000 - st r1, [r7+0x0]
+  03DC - 09300004 - li r3, #4
+  03E0 - 01730000 - add r7, r3
+  03E4 - 09300004 - li r3, #4
+  03E8 - 02730000 - sub r7, r3
+  03EC - 07270000 - ld r2, [r7+0x0]
+  03F0 - 09300004 - li r3, #4
+  03F4 - 02730000 - sub r7, r3
+  03F8 - 07170000 - ld r1, [r7+0x0]
+  03FC - 06120000 - cmp r1, r2
+  0400 - 0F00040C - jg 0x040C
+  0404 - 09100000 - li r1, #0
+  0408 - 0A000410 - jmp 0x0410
+  040C - 09100001 - li r1, #1
+  0410 - 08170000 - st r1, [r7+0x0]
+  0414 - 09300004 - li r3, #4
+  0418 - 01730000 - add r7, r3
+  041C - 09300004 - li r3, #4
+  0420 - 02730000 - sub r7, r3
+  0424 - 07170000 - ld r1, [r7+0x0]
+  0428 - 09200000 - li r2, #0
+  042C - 06120000 - cmp r1, r2
+  0430 - 0B0005B8 - jz 0x05B8
+  0434 - 07102060 - ld r1, [r0+0x2060]
+  0438 - 08170000 - st r1, [r7+0x0]
+  043C - 09300004 - li r3, #4
+  0440 - 01730000 - add r7, r3
+  0444 - 09300004 - li r3, #4
+  0448 - 02730000 - sub r7, r3
+  044C - 07170000 - ld r1, [r7+0x0]
+  0450 - 09200004 - li r2, #4
+  0454 - 03120000 - mul r1, r2
+  0458 - 09202008 - li r2, #8200
+  045C - 01120000 - add r1, r2
+  0460 - 07110000 - ld r1, [r1+0x0]
+  0464 - 08170000 - st r1, [r7+0x0]
+  0468 - 09300004 - li r3, #4
+  046C - 01730000 - add r7, r3
+  0470 - 09300004 - li r3, #4
+  0474 - 02730000 - sub r7, r3
+  0478 - 07170000 - ld r1, [r7+0x0]
+  047C - 08102064 - st r1, [r0+0x2064]
+  0480 - 07102060 - ld r1, [r0+0x2060]
+  0484 - 08170000 - st r1, [r7+0x0]
+  0488 - 09300004 - li r3, #4
+  048C - 01730000 - add r7, r3
+  0490 - 09100001 - li r1, #1
+  0494 - 08170000 - st r1, [r7+0x0]
+  0498 - 09300004 - li r3, #4
+  049C - 01730000 - add r7, r3
+  04A0 - 09300004 - li r3, #4
+  04A4 - 02730000 - sub r7, r3
+  04A8 - 07270000 - ld r2, [r7+0x0]
+  04AC - 09300004 - li r3, #4
+  04B0 - 02730000 - sub r7, r3
+  04B4 - 07170000 - ld r1, [r7+0x0]
+  04B8 - 01120000 - add r1, r2
+  04BC - 08170000 - st r1, [r7+0x0]
+  04C0 - 09300004 - li r3, #4
+  04C4 - 01730000 - add r7, r3
+  04C8 - 09300004 - li r3, #4
+  04CC - 02730000 - sub r7, r3
+  04D0 - 07170000 - ld r1, [r7+0x0]
+  04D4 - 09200004 - li r2, #4
+  04D8 - 03120000 - mul r1, r2
+  04DC - 09202008 - li r2, #8200
+  04E0 - 01120000 - add r1, r2
+  04E4 - 07110000 - ld r1, [r1+0x0]
+  04E8 - 08170000 - st r1, [r7+0x0]
+  04EC - 09300004 - li r3, #4
+  04F0 - 01730000 - add r7, r3
+  04F4 - 07102060 - ld r1, [r0+0x2060]
+  04F8 - 08170000 - st r1, [r7+0x0]
+  04FC - 09300004 - li r3, #4
+  0500 - 01730000 - add r7, r3
+  0504 - 09300004 - li r3, #4
+  0508 - 02730000 - sub r7, r3
+  050C - 07170000 - ld r1, [r7+0x0]
+  0510 - 09200004 - li r2, #4
+  0514 - 03120000 - mul r1, r2
+  0518 - 09202008 - li r2, #8200
+  051C - 01120000 - add r1, r2
+  0520 - 09300004 - li r3, #4
+  0524 - 02730000 - sub r7, r3
+  0528 - 07270000 - ld r2, [r7+0x0]
+  052C - 08210000 - st r2, [r1+0x0]
+  0530 - 07102064 - ld r1, [r0+0x2064]
+  0534 - 08170000 - st r1, [r7+0x0]
+  0538 - 09300004 - li r3, #4
+  053C - 01730000 - add r7, r3
+  0540 - 07102060 - ld r1, [r0+0x2060]
+  0544 - 08170000 - st r1, [r7+0x0]
+  0548 - 09300004 - li r3, #4
+  054C - 01730000 - add r7, r3
+  0550 - 09100001 - li r1, #1
+  0554 - 08170000 - st r1, [r7+0x0]
+  0558 - 09300004 - li r3, #4
+  055C - 01730000 - add r7, r3
+  0560 - 09300004 - li r3, #4
+  0564 - 02730000 - sub r7, r3
+  0568 - 07270000 - ld r2, [r7+0x0]
+  056C - 09300004 - li r3, #4
+  0570 - 02730000 - sub r7, r3
+  0574 - 07170000 - ld r1, [r7+0x0]
+  0578 - 01120000 - add r1, r2
+  057C - 08170000 - st r1, [r7+0x0]
+  0580 - 09300004 - li r3, #4
+  0584 - 01730000 - add r7, r3
+  0588 - 09300004 - li r3, #4
+  058C - 02730000 - sub r7, r3
+  0590 - 07170000 - ld r1, [r7+0x0]
+  0594 - 09200004 - li r2, #4
+  0598 - 03120000 - mul r1, r2
+  059C - 09202008 - li r2, #8200
+  05A0 - 01120000 - add r1, r2
+  05A4 - 09300004 - li r3, #4
+  05A8 - 02730000 - sub r7, r3
+  05AC - 07270000 - ld r2, [r7+0x0]
+  05B0 - 08210000 - st r2, [r1+0x0]
+  05B4 - 0A0005B8 - jmp 0x05B8
+  05B8 - 07102060 - ld r1, [r0+0x2060]
+  05BC - 08170000 - st r1, [r7+0x0]
+  05C0 - 09300004 - li r3, #4
+  05C4 - 01730000 - add r7, r3
+  05C8 - 09100001 - li r1, #1
+  05CC - 08170000 - st r1, [r7+0x0]
+  05D0 - 09300004 - li r3, #4
+  05D4 - 01730000 - add r7, r3
+  05D8 - 09300004 - li r3, #4
+  05DC - 02730000 - sub r7, r3
+  05E0 - 07270000 - ld r2, [r7+0x0]
+  05E4 - 09300004 - li r3, #4
+  05E8 - 02730000 - sub r7, r3
+  05EC - 07170000 - ld r1, [r7+0x0]
+  05F0 - 01120000 - add r1, r2
+  05F4 - 08170000 - st r1, [r7+0x0]
+  05F8 - 09300004 - li r3, #4
+  05FC - 01730000 - add r7, r3
+  0600 - 09300004 - li r3, #4
+  0604 - 02730000 - sub r7, r3
+  0608 - 07170000 - ld r1, [r7+0x0]
+  060C - 08102060 - st r1, [r0+0x2060]
+  0610 - 0A00028C - jmp 0x028C
+  0614 - 0710205C - ld r1, [r0+0x205C]
+  0618 - 08170000 - st r1, [r7+0x0]
+  061C - 09300004 - li r3, #4
+  0620 - 01730000 - add r7, r3
+  0624 - 09100001 - li r1, #1
+  0628 - 08170000 - st r1, [r7+0x0]
+  062C - 09300004 - li r3, #4
+  0630 - 01730000 - add r7, r3
+  0634 - 09300004 - li r3, #4
+  0638 - 02730000 - sub r7, r3
+  063C - 07270000 - ld r2, [r7+0x0]
+  0640 - 09300004 - li r3, #4
+  0644 - 02730000 - sub r7, r3
+  0648 - 07170000 - ld r1, [r7+0x0]
+  064C - 01120000 - add r1, r2
+  0650 - 08170000 - st r1, [r7+0x0]
+  0654 - 09300004 - li r3, #4
+  0658 - 01730000 - add r7, r3
+  065C - 09300004 - li r3, #4
+  0660 - 02730000 - sub r7, r3
+  0664 - 07170000 - ld r1, [r7+0x0]
+  0668 - 0810205C - st r1, [r0+0x205C]
+  066C - 0A0001FC - jmp 0x01FC
+  0670 - 09100000 - li r1, #0
+  0674 - 08170000 - st r1, [r7+0x0]
+  0678 - 09300004 - li r3, #4
+  067C - 01730000 - add r7, r3
+  0680 - 09300004 - li r3, #4
+  0684 - 02730000 - sub r7, r3
+  0688 - 07170000 - ld r1, [r7+0x0]
+  068C - 08102068 - st r1, [r0+0x2068]
+  0690 - 07102068 - ld r1, [r0+0x2068]
+  0694 - 08170000 - st r1, [r7+0x0]
+  0698 - 09300004 - li r3, #4
+  069C - 01730000 - add r7, r3
+  06A0 - 0710204C - ld r1, [r0+0x204C]
+  06A4 - 08170000 - st r1, [r7+0x0]
+  06A8 - 09300004 - li r3, #4
+  06AC - 01730000 - add r7, r3
+  06B0 - 09300004 - li r3, #4
+  06B4 - 02730000 - sub r7, r3
+  06B8 - 07270000 - ld r2, [r7+0x0]
+  06BC - 09300004 - li r3, #4
+  06C0 - 02730000 - sub r7, r3
+  06C4 - 07170000 - ld r1, [r7+0x0]
+  06C8 - 06120000 - cmp r1, r2
+  06CC - 0D0006D8 - jl 0x06D8
+  06D0 - 09100000 - li r1, #0
+  06D4 - 0A0006DC - jmp 0x06DC
+  06D8 - 09100001 - li r1, #1
+  06DC - 08170000 - st r1, [r7+0x0]
+  06E0 - 09300004 - li r3, #4
+  06E4 - 01730000 - add r7, r3
+  06E8 - 09300004 - li r3, #4
+  06EC - 02730000 - sub r7, r3
+  06F0 - 07170000 - ld r1, [r7+0x0]
+  06F4 - 09200000 - li r2, #0
+  06F8 - 06120000 - cmp r1, r2
+  06FC - 0B00090C - jz 0x090C
+  0700 - 07102068 - ld r1, [r0+0x2068]
+  0704 - 08170000 - st r1, [r7+0x0]
+  0708 - 09300004 - li r3, #4
+  070C - 01730000 - add r7, r3
+  0710 - 09300004 - li r3, #4
+  0714 - 02730000 - sub r7, r3
+  0718 - 07170000 - ld r1, [r7+0x0]
+  071C - 09200004 - li r2, #4
+  0720 - 03120000 - mul r1, r2
+  0724 - 09202008 - li r2, #8200
+  0728 - 01120000 - add r1, r2
+  072C - 07110000 - ld r1, [r1+0x0]
+  0730 - 08170000 - st r1, [r7+0x0]
+  0734 - 09300004 - li r3, #4
+  0738 - 01730000 - add r7, r3
+  073C - 09300004 - li r3, #4
+  0740 - 02730000 - sub r7, r3
+  0744 - 07170000 - ld r1, [r7+0x0]
+  0748 - 09200000 - li r2, #0
+  074C - 06120000 - cmp r1, r2
+  0750 - 1000076C - jge 0x076C
+  0754 - 0920002D - li r2, #45
+  0758 - 12020001 - out r2, port#1
+  075C - 09200000 - li r2, #0
+  0760 - 02210000 - sub r2, r1
+  0764 - 09100000 - li r1, #0
+  0768 - 01120000 - add r1, r2
+  076C - 09200000 - li r2, #0
+  0770 - 06120000 - cmp r1, r2
+  0774 - 0C000784 - jnz 0x0784
+  0778 - 09200030 - li r2, #48
+  077C - 12020001 - out r2, port#1
+  0780 - 0A0007E4 - jmp 0x07E4
+  0784 - 09400000 - li r4, #0
+  0788 - 09200000 - li r2, #0
+  078C - 06120000 - cmp r1, r2
+  0790 - 0B0007C4 - jz 0x07C4
+  0794 - 09300000 - li r3, #0
+  0798 - 01310000 - add r3, r1
+  079C - 0920000A - li r2, #10
+  07A0 - 05320000 - mod r3, r2
+  07A4 - 09200030 - li r2, #48
+  07A8 - 01320000 - add r3, r2
+  07AC - 08342300 - st r3, [r4+0x2300]
+  07B0 - 09200004 - li r2, #4
+  07B4 - 01420000 - add r4, r2
+  07B8 - 0920000A - li r2, #10
+  07BC - 04120000 - div r1, r2
+  07C0 - 0A000788 - jmp 0x0788
+  07C4 - 09200000 - li r2, #0
+  07C8 - 06420000 - cmp r4, r2
+  07CC - 0B0007E4 - jz 0x07E4
+  07D0 - 09200004 - li r2, #4
+  07D4 - 02420000 - sub r4, r2
+  07D8 - 07342300 - ld r3, [r4+0x2300]
+  07DC - 12030001 - out r3, port#1
+  07E0 - 0A0007C4 - jmp 0x07C4
+  07E4 - 07102068 - ld r1, [r0+0x2068]
+  07E8 - 08170000 - st r1, [r7+0x0]
+  07EC - 09300004 - li r3, #4
+  07F0 - 01730000 - add r7, r3
+  07F4 - 0710204C - ld r1, [r0+0x204C]
+  07F8 - 08170000 - st r1, [r7+0x0]
+  07FC - 09300004 - li r3, #4
+  0800 - 01730000 - add r7, r3
+  0804 - 09100001 - li r1, #1
+  0808 - 08170000 - st r1, [r7+0x0]
+  080C - 09300004 - li r3, #4
+  0810 - 01730000 - add r7, r3
+  0814 - 09300004 - li r3, #4
+  0818 - 02730000 - sub r7, r3
+  081C - 07270000 - ld r2, [r7+0x0]
+  0820 - 09300004 - li r3, #4
+  0824 - 02730000 - sub r7, r3
+  0828 - 07170000 - ld r1, [r7+0x0]
+  082C - 02120000 - sub r1, r2
+  0830 - 08170000 - st r1, [r7+0x0]
+  0834 - 09300004 - li r3, #4
+  0838 - 01730000 - add r7, r3
+  083C - 09300004 - li r3, #4
+  0840 - 02730000 - sub r7, r3
+  0844 - 07270000 - ld r2, [r7+0x0]
+  0848 - 09300004 - li r3, #4
+  084C - 02730000 - sub r7, r3
+  0850 - 07170000 - ld r1, [r7+0x0]
+  0854 - 06120000 - cmp r1, r2
+  0858 - 0D000864 - jl 0x0864
+  085C - 09100000 - li r1, #0
+  0860 - 0A000868 - jmp 0x0868
+  0864 - 09100001 - li r1, #1
+  0868 - 08170000 - st r1, [r7+0x0]
+  086C - 09300004 - li r3, #4
+  0870 - 01730000 - add r7, r3
+  0874 - 09300004 - li r3, #4
+  0878 - 02730000 - sub r7, r3
+  087C - 07170000 - ld r1, [r7+0x0]
+  0880 - 09200000 - li r2, #0
+  0884 - 06120000 - cmp r1, r2
+  0888 - 0B0008B0 - jz 0x08B0
+  088C - 09100020 - li r1, #32
+  0890 - 08170000 - st r1, [r7+0x0]
+  0894 - 09300004 - li r3, #4
+  0898 - 01730000 - add r7, r3
+  089C - 09300004 - li r3, #4
+  08A0 - 02730000 - sub r7, r3
+  08A4 - 07170000 - ld r1, [r7+0x0]
+  08A8 - 12010001 - out r1, port#1
+  08AC - 0A0008B0 - jmp 0x08B0
+  08B0 - 07102068 - ld r1, [r0+0x2068]
+  08B4 - 08170000 - st r1, [r7+0x0]
+  08B8 - 09300004 - li r3, #4
+  08BC - 01730000 - add r7, r3
+  08C0 - 09100001 - li r1, #1
+  08C4 - 08170000 - st r1, [r7+0x0]
+  08C8 - 09300004 - li r3, #4
+  08CC - 01730000 - add r7, r3
+  08D0 - 09300004 - li r3, #4
+  08D4 - 02730000 - sub r7, r3
+  08D8 - 07270000 - ld r2, [r7+0x0]
+  08DC - 09300004 - li r3, #4
+  08E0 - 02730000 - sub r7, r3
+  08E4 - 07170000 - ld r1, [r7+0x0]
+  08E8 - 01120000 - add r1, r2
+  08EC - 08170000 - st r1, [r7+0x0]
+  08F0 - 09300004 - li r3, #4
+  08F4 - 01730000 - add r7, r3
+  08F8 - 09300004 - li r3, #4
+  08FC - 02730000 - sub r7, r3
+  0900 - 07170000 - ld r1, [r7+0x0]
+  0904 - 08102068 - st r1, [r0+0x2068]
+  0908 - 0A000690 - jmp 0x0690
+  090C - 13000000 - halt
+  0910 - 11100000 - in r1, port#0
+  0914 - 08170000 - st r1, [r7+0x0]
+  0918 - 09300004 - li r3, #4
+  091C - 01730000 - add r7, r3
+  0920 - 09300004 - li r3, #4
+  0924 - 02730000 - sub r7, r3
+  0928 - 07170000 - ld r1, [r7+0x0]
+  092C - 0810206C - st r1, [r0+0x206C]
+  0930 - 0710206C - ld r1, [r0+0x206C]
+  0934 - 08170000 - st r1, [r7+0x0]
+  0938 - 09300004 - li r3, #4
+  093C - 01730000 - add r7, r3
+  0940 - 09100020 - li r1, #32
+  0944 - 08170000 - st r1, [r7+0x0]
+  0948 - 09300004 - li r3, #4
+  094C - 01730000 - add r7, r3
+  0950 - 09300004 - li r3, #4
+  0954 - 02730000 - sub r7, r3
+  0958 - 07270000 - ld r2, [r7+0x0]
+  095C - 09300004 - li r3, #4
+  0960 - 02730000 - sub r7, r3
+  0964 - 07170000 - ld r1, [r7+0x0]
+  0968 - 06120000 - cmp r1, r2
+  096C - 0B000978 - jz 0x0978
+  0970 - 09100000 - li r1, #0
+  0974 - 0A00097C - jmp 0x097C
+  0978 - 09100001 - li r1, #1
+  097C - 08170000 - st r1, [r7+0x0]
+  0980 - 09300004 - li r3, #4
+  0984 - 01730000 - add r7, r3
+  0988 - 09300004 - li r3, #4
+  098C - 02730000 - sub r7, r3
+  0990 - 07170000 - ld r1, [r7+0x0]
+  0994 - 09200000 - li r2, #0
+  0998 - 06120000 - cmp r1, r2
+  099C - 0B000B1C - jz 0x0B1C
+  09A0 - 07102050 - ld r1, [r0+0x2050]
+  09A4 - 08170000 - st r1, [r7+0x0]
+  09A8 - 09300004 - li r3, #4
+  09AC - 01730000 - add r7, r3
+  09B0 - 09100000 - li r1, #0
+  09B4 - 08170000 - st r1, [r7+0x0]
+  09B8 - 09300004 - li r3, #4
+  09BC - 01730000 - add r7, r3
+  09C0 - 09300004 - li r3, #4
+  09C4 - 02730000 - sub r7, r3
+  09C8 - 07270000 - ld r2, [r7+0x0]
+  09CC - 09300004 - li r3, #4
+  09D0 - 02730000 - sub r7, r3
+  09D4 - 07170000 - ld r1, [r7+0x0]
+  09D8 - 06120000 - cmp r1, r2
+  09DC - 0B0009E8 - jz 0x09E8
+  09E0 - 09100000 - li r1, #0
+  09E4 - 0A0009EC - jmp 0x09EC
+  09E8 - 09100001 - li r1, #1
+  09EC - 08170000 - st r1, [r7+0x0]
+  09F0 - 09300004 - li r3, #4
+  09F4 - 01730000 - add r7, r3
+  09F8 - 09300004 - li r3, #4
+  09FC - 02730000 - sub r7, r3
+  0A00 - 07170000 - ld r1, [r7+0x0]
+  0A04 - 09200000 - li r2, #0
+  0A08 - 06120000 - cmp r1, r2
+  0A0C - 0B000A54 - jz 0x0A54
+  0A10 - 07102054 - ld r1, [r0+0x2054]
+  0A14 - 08170000 - st r1, [r7+0x0]
+  0A18 - 09300004 - li r3, #4
+  0A1C - 01730000 - add r7, r3
+  0A20 - 09300004 - li r3, #4
+  0A24 - 02730000 - sub r7, r3
+  0A28 - 07170000 - ld r1, [r7+0x0]
+  0A2C - 0810204C - st r1, [r0+0x204C]
+  0A30 - 09100001 - li r1, #1
+  0A34 - 08170000 - st r1, [r7+0x0]
+  0A38 - 09300004 - li r3, #4
+  0A3C - 01730000 - add r7, r3
+  0A40 - 09300004 - li r3, #4
+  0A44 - 02730000 - sub r7, r3
+  0A48 - 07170000 - ld r1, [r7+0x0]
+  0A4C - 08102050 - st r1, [r0+0x2050]
+  0A50 - 0A000AF8 - jmp 0x0AF8
+  0A54 - 07102054 - ld r1, [r0+0x2054]
+  0A58 - 08170000 - st r1, [r7+0x0]
+  0A5C - 09300004 - li r3, #4
+  0A60 - 01730000 - add r7, r3
+  0A64 - 07102048 - ld r1, [r0+0x2048]
+  0A68 - 08170000 - st r1, [r7+0x0]
+  0A6C - 09300004 - li r3, #4
+  0A70 - 01730000 - add r7, r3
+  0A74 - 09300004 - li r3, #4
+  0A78 - 02730000 - sub r7, r3
+  0A7C - 07170000 - ld r1, [r7+0x0]
+  0A80 - 09200004 - li r2, #4
+  0A84 - 03120000 - mul r1, r2
+  0A88 - 09202008 - li r2, #8200
+  0A8C - 01120000 - add r1, r2
+  0A90 - 09300004 - li r3, #4
+  0A94 - 02730000 - sub r7, r3
+  0A98 - 07270000 - ld r2, [r7+0x0]
+  0A9C - 08210000 - st r2, [r1+0x0]
+  0AA0 - 07102048 - ld r1, [r0+0x2048]
+  0AA4 - 08170000 - st r1, [r7+0x0]
+  0AA8 - 09300004 - li r3, #4
+  0AAC - 01730000 - add r7, r3
+  0AB0 - 09100001 - li r1, #1
+  0AB4 - 08170000 - st r1, [r7+0x0]
+  0AB8 - 09300004 - li r3, #4
+  0ABC - 01730000 - add r7, r3
+  0AC0 - 09300004 - li r3, #4
+  0AC4 - 02730000 - sub r7, r3
+  0AC8 - 07270000 - ld r2, [r7+0x0]
+  0ACC - 09300004 - li r3, #4
+  0AD0 - 02730000 - sub r7, r3
+  0AD4 - 07170000 - ld r1, [r7+0x0]
+  0AD8 - 01120000 - add r1, r2
+  0ADC - 08170000 - st r1, [r7+0x0]
+  0AE0 - 09300004 - li r3, #4
+  0AE4 - 01730000 - add r7, r3
+  0AE8 - 09300004 - li r3, #4
+  0AEC - 02730000 - sub r7, r3
+  0AF0 - 07170000 - ld r1, [r7+0x0]
+  0AF4 - 08102048 - st r1, [r0+0x2048]
+  0AF8 - 09100000 - li r1, #0
+  0AFC - 08170000 - st r1, [r7+0x0]
+  0B00 - 09300004 - li r3, #4
+  0B04 - 01730000 - add r7, r3
+  0B08 - 09300004 - li r3, #4
+  0B0C - 02730000 - sub r7, r3
+  0B10 - 07170000 - ld r1, [r7+0x0]
+  0B14 - 08102054 - st r1, [r0+0x2054]
+  0B18 - 0A000D1C - jmp 0x0D1C
+  0B1C - 0710206C - ld r1, [r0+0x206C]
+  0B20 - 08170000 - st r1, [r7+0x0]
+  0B24 - 09300004 - li r3, #4
+  0B28 - 01730000 - add r7, r3
+  0B2C - 0910000A - li r1, #10
+  0B30 - 08170000 - st r1, [r7+0x0]
+  0B34 - 09300004 - li r3, #4
+  0B38 - 01730000 - add r7, r3
+  0B3C - 09300004 - li r3, #4
+  0B40 - 02730000 - sub r7, r3
+  0B44 - 07270000 - ld r2, [r7+0x0]
+  0B48 - 09300004 - li r3, #4
+  0B4C - 02730000 - sub r7, r3
+  0B50 - 07170000 - ld r1, [r7+0x0]
+  0B54 - 06120000 - cmp r1, r2
+  0B58 - 0B000B64 - jz 0x0B64
+  0B5C - 09100000 - li r1, #0
+  0B60 - 0A000B68 - jmp 0x0B68
+  0B64 - 09100001 - li r1, #1
+  0B68 - 08170000 - st r1, [r7+0x0]
+  0B6C - 09300004 - li r3, #4
+  0B70 - 01730000 - add r7, r3
+  0B74 - 09300004 - li r3, #4
+  0B78 - 02730000 - sub r7, r3
+  0B7C - 07170000 - ld r1, [r7+0x0]
+  0B80 - 09200000 - li r2, #0
+  0B84 - 06120000 - cmp r1, r2
+  0B88 - 0B000C54 - jz 0x0C54
+  0B8C - 07102054 - ld r1, [r0+0x2054]
+  0B90 - 08170000 - st r1, [r7+0x0]
+  0B94 - 09300004 - li r3, #4
+  0B98 - 01730000 - add r7, r3
+  0B9C - 07102048 - ld r1, [r0+0x2048]
+  0BA0 - 08170000 - st r1, [r7+0x0]
+  0BA4 - 09300004 - li r3, #4
+  0BA8 - 01730000 - add r7, r3
+  0BAC - 09300004 - li r3, #4
+  0BB0 - 02730000 - sub r7, r3
+  0BB4 - 07170000 - ld r1, [r7+0x0]
+  0BB8 - 09200004 - li r2, #4
+  0BBC - 03120000 - mul r1, r2
+  0BC0 - 09202008 - li r2, #8200
+  0BC4 - 01120000 - add r1, r2
+  0BC8 - 09300004 - li r3, #4
+  0BCC - 02730000 - sub r7, r3
+  0BD0 - 07270000 - ld r2, [r7+0x0]
+  0BD4 - 08210000 - st r2, [r1+0x0]
+  0BD8 - 07102048 - ld r1, [r0+0x2048]
+  0BDC - 08170000 - st r1, [r7+0x0]
+  0BE0 - 09300004 - li r3, #4
+  0BE4 - 01730000 - add r7, r3
+  0BE8 - 09100001 - li r1, #1
+  0BEC - 08170000 - st r1, [r7+0x0]
+  0BF0 - 09300004 - li r3, #4
+  0BF4 - 01730000 - add r7, r3
+  0BF8 - 09300004 - li r3, #4
+  0BFC - 02730000 - sub r7, r3
+  0C00 - 07270000 - ld r2, [r7+0x0]
+  0C04 - 09300004 - li r3, #4
+  0C08 - 02730000 - sub r7, r3
+  0C0C - 07170000 - ld r1, [r7+0x0]
+  0C10 - 01120000 - add r1, r2
+  0C14 - 08170000 - st r1, [r7+0x0]
+  0C18 - 09300004 - li r3, #4
+  0C1C - 01730000 - add r7, r3
+  0C20 - 09300004 - li r3, #4
+  0C24 - 02730000 - sub r7, r3
+  0C28 - 07170000 - ld r1, [r7+0x0]
+  0C2C - 08102048 - st r1, [r0+0x2048]
+  0C30 - 09100001 - li r1, #1
+  0C34 - 08170000 - st r1, [r7+0x0]
+  0C38 - 09300004 - li r3, #4
+  0C3C - 01730000 - add r7, r3
+  0C40 - 09300004 - li r3, #4
+  0C44 - 02730000 - sub r7, r3
+  0C48 - 07170000 - ld r1, [r7+0x0]
+  0C4C - 08102058 - st r1, [r0+0x2058]
+  0C50 - 0A000D1C - jmp 0x0D1C
+  0C54 - 07102054 - ld r1, [r0+0x2054]
+  0C58 - 08170000 - st r1, [r7+0x0]
+  0C5C - 09300004 - li r3, #4
+  0C60 - 01730000 - add r7, r3
+  0C64 - 0910000A - li r1, #10
+  0C68 - 08170000 - st r1, [r7+0x0]
+  0C6C - 09300004 - li r3, #4
+  0C70 - 01730000 - add r7, r3
+  0C74 - 09300004 - li r3, #4
+  0C78 - 02730000 - sub r7, r3
+  0C7C - 07270000 - ld r2, [r7+0x0]
+  0C80 - 09300004 - li r3, #4
+  0C84 - 02730000 - sub r7, r3
+  0C88 - 07170000 - ld r1, [r7+0x0]
+  0C8C - 03120000 - mul r1, r2
+  0C90 - 08170000 - st r1, [r7+0x0]
+  0C94 - 09300004 - li r3, #4
+  0C98 - 01730000 - add r7, r3
+  0C9C - 0710206C - ld r1, [r0+0x206C]
+  0CA0 - 08170000 - st r1, [r7+0x0]
+  0CA4 - 09300004 - li r3, #4
+  0CA8 - 01730000 - add r7, r3
+  0CAC - 09100030 - li r1, #48
+  0CB0 - 08170000 - st r1, [r7+0x0]
+  0CB4 - 09300004 - li r3, #4
+  0CB8 - 01730000 - add r7, r3
+  0CBC - 09300004 - li r3, #4
+  0CC0 - 02730000 - sub r7, r3
+  0CC4 - 07270000 - ld r2, [r7+0x0]
+  0CC8 - 09300004 - li r3, #4
+  0CCC - 02730000 - sub r7, r3
+  0CD0 - 07170000 - ld r1, [r7+0x0]
+  0CD4 - 02120000 - sub r1, r2
+  0CD8 - 08170000 - st r1, [r7+0x0]
+  0CDC - 09300004 - li r3, #4
+  0CE0 - 01730000 - add r7, r3
+  0CE4 - 09300004 - li r3, #4
+  0CE8 - 02730000 - sub r7, r3
+  0CEC - 07270000 - ld r2, [r7+0x0]
+  0CF0 - 09300004 - li r3, #4
+  0CF4 - 02730000 - sub r7, r3
+  0CF8 - 07170000 - ld r1, [r7+0x0]
+  0CFC - 01120000 - add r1, r2
+  0D00 - 08170000 - st r1, [r7+0x0]
+  0D04 - 09300004 - li r3, #4
+  0D08 - 01730000 - add r7, r3
+  0D0C - 09300004 - li r3, #4
+  0D10 - 02730000 - sub r7, r3
+  0D14 - 07170000 - ld r1, [r7+0x0]
+  0D18 - 08102054 - st r1, [r0+0x2054]
+  0D1C - 14000000 - iret
+out_code: !!binary |
+  CgAABAlwQAAJEAAACBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAgSAkQAAAIFwAACTAABAFzAAAJ
+  MAAEAnMAAAcXAAAIECBMCRAAAAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAgQIFAJEAAACBcAAAkw
+  AAQBcwAACTAABAJzAAAHFwAACBAgVAkQAAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECBYCRAA
+  AAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAkgAAQDEgAACSAi8AESAAAIFwAACTAABAFzAAAJEAkQ
+  CBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAACCEAAAkQAAAIFwAACTAABAFzAAAJ
+  MAAEAnMAAAcXAAAVAAAACRAAAAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAcQIFgIFwAACTAABAFz
+  AAAJEAAACBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAABhIAAAsAAZAJEAAACgAB
+  lAkQAAEIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAJIAAABhIAAAsAAbwKAAFIFgAAAAkQAAAIFwAA
+  CTAABAFzAAAJMAAEAnMAAAcXAAAJEAAACBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAgXAcQIFwI
+  FwAACTAABAFzAAAHECBMCBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAABhIAAA0A
+  AkQJEAAACgACSAkQAAEIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAJIAAABhIAAAsABnAJEAAACBcA
+  AAkwAAQBcwAACTAABAJzAAAHFwAACBAgYAcQIGAIFwAACTAABAFzAAAHECBMCBcAAAkwAAQBcwAA
+  CRAAAQgXAAAJMAAEAXMAAAkwAAQCcwAABycAAAkwAAQCcwAABxcAAAISAAAIFwAACTAABAFzAAAJ
+  MAAEAnMAAAcnAAAJMAAEAnMAAAcXAAAGEgAADQADDAkQAAAKAAMQCRAAAQgXAAAJMAAEAXMAAAkw
+  AAQCcwAABxcAAAkgAAAGEgAACwAGFAcQIGAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAJIAAEAxIA
+  AAkgIAgBEgAABxEAAAgXAAAJMAAEAXMAAAcQIGAIFwAACTAABAFzAAAJEAABCBcAAAkwAAQBcwAA
+  CTAABAJzAAAHJwAACTAABAJzAAAHFwAAARIAAAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAkgAAQD
+  EgAACSAgCAESAAAHEQAACBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAABhIAAA8A
+  BAwJEAAACgAEEAkQAAEIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAJIAAABhIAAAsABbgHECBgCBcA
+  AAkwAAQBcwAACTAABAJzAAAHFwAACSAABAMSAAAJICAIARIAAAcRAAAIFwAACTAABAFzAAAJMAAE
+  AnMAAAcXAAAIECBkBxAgYAgXAAAJMAAEAXMAAAkQAAEIFwAACTAABAFzAAAJMAAEAnMAAAcnAAAJ
+  MAAEAnMAAAcXAAABEgAACBcAAAkwAAQBcwAACTAABAJzAAAHFwAACSAABAMSAAAJICAIARIAAAcR
+  AAAIFwAACTAABAFzAAAHECBgCBcAAAkwAAQBcwAACTAABAJzAAAHFwAACSAABAMSAAAJICAIARIA
+  AAkwAAQCcwAABycAAAghAAAHECBkCBcAAAkwAAQBcwAABxAgYAgXAAAJMAAEAXMAAAkQAAEIFwAA
+  CTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAABEgAACBcAAAkwAAQBcwAACTAABAJzAAAH
+  FwAACSAABAMSAAAJICAIARIAAAkwAAQCcwAABycAAAghAAAKAAW4BxAgYAgXAAAJMAAEAXMAAAkQ
+  AAEIFwAACTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAABEgAACBcAAAkwAAQBcwAACTAA
+  BAJzAAAHFwAACBAgYAoAAowHECBcCBcAAAkwAAQBcwAACRAAAQgXAAAJMAAEAXMAAAkwAAQCcwAA
+  BycAAAkwAAQCcwAABxcAAAESAAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECBcCgAB/AkQAAAI
+  FwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECBoBxAgaAgXAAAJMAAEAXMAAAcQIEwIFwAACTAABAFz
+  AAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAAGEgAADQAG2AkQAAAKAAbcCRAAAQgXAAAJMAAEAXMA
+  AAkwAAQCcwAABxcAAAkgAAAGEgAACwAJDAcQIGgIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAJIAAE
+  AxIAAAkgIAgBEgAABxEAAAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAkgAAAGEgAAEAAHbAkgAC0S
+  AgABCSAAAAIhAAAJEAAAARIAAAkgAAAGEgAADAAHhAkgADASAgABCgAH5AlAAAAJIAAABhIAAAsA
+  B8QJMAAAATEAAAkgAAoFMgAACSAAMAEyAAAINCMACSAABAFCAAAJIAAKBBIAAAoAB4gJIAAABkIA
+  AAsAB+QJIAAEAkIAAAc0IwASAwABCgAHxAcQIGgIFwAACTAABAFzAAAHECBMCBcAAAkwAAQBcwAA
+  CRAAAQgXAAAJMAAEAXMAAAkwAAQCcwAABycAAAkwAAQCcwAABxcAAAISAAAIFwAACTAABAFzAAAJ
+  MAAEAnMAAAcnAAAJMAAEAnMAAAcXAAAGEgAADQAIZAkQAAAKAAhoCRAAAQgXAAAJMAAEAXMAAAkw
+  AAQCcwAABxcAAAkgAAAGEgAACwAIsAkQACAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAASAQABCgAI
+  sAcQIGgIFwAACTAABAFzAAAJEAABCBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAA
+  ARIAAAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAgQIGgKAAaQEwAAABEQAAAIFwAACTAABAFzAAAJ
+  MAAEAnMAAAcXAAAIECBsBxAgbAgXAAAJMAAEAXMAAAkQACAIFwAACTAABAFzAAAJMAAEAnMAAAcn
+  AAAJMAAEAnMAAAcXAAAGEgAACwAJeAkQAAAKAAl8CRAAAQgXAAAJMAAEAXMAAAkwAAQCcwAABxcA
+  AAkgAAAGEgAACwALHAcQIFAIFwAACTAABAFzAAAJEAAACBcAAAkwAAQBcwAACTAABAJzAAAHJwAA
+  CTAABAJzAAAHFwAABhIAAAsACegJEAAACgAJ7AkQAAEIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAJ
+  IAAABhIAAAsAClQHECBUCBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAgTAkQAAEIFwAACTAABAFz
+  AAAJMAAEAnMAAAcXAAAIECBQCgAK+AcQIFQIFwAACTAABAFzAAAHECBICBcAAAkwAAQBcwAACTAA
+  BAJzAAAHFwAACSAABAMSAAAJICAIARIAAAkwAAQCcwAABycAAAghAAAHECBICBcAAAkwAAQBcwAA
+  CRAAAQgXAAAJMAAEAXMAAAkwAAQCcwAABycAAAkwAAQCcwAABxcAAAESAAAIFwAACTAABAFzAAAJ
+  MAAEAnMAAAcXAAAIECBICRAAAAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAgQIFQKAA0cBxAgbAgX
+  AAAJMAAEAXMAAAkQAAoIFwAACTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAAGEgAACwAL
+  ZAkQAAAKAAtoCRAAAQgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAkgAAAGEgAACwAMVAcQIFQIFwAA
+  CTAABAFzAAAHECBICBcAAAkwAAQBcwAACTAABAJzAAAHFwAACSAABAMSAAAJICAIARIAAAkwAAQC
+  cwAABycAAAghAAAHECBICBcAAAkwAAQBcwAACRAAAQgXAAAJMAAEAXMAAAkwAAQCcwAABycAAAkw
+  AAQCcwAABxcAAAESAAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECBICRAAAQgXAAAJMAAEAXMA
+  AAkwAAQCcwAABxcAAAgQIFgKAA0cBxAgVAgXAAAJMAAEAXMAAAkQAAoIFwAACTAABAFzAAAJMAAE
+  AnMAAAcnAAAJMAAEAnMAAAcXAAADEgAACBcAAAkwAAQBcwAABxAgbAgXAAAJMAAEAXMAAAkQADAI
+  FwAACTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAACEgAACBcAAAkwAAQBcwAACTAABAJz
+  AAAHJwAACTAABAJzAAAHFwAAARIAAAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAgQIFQUAAAA

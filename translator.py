@@ -22,12 +22,14 @@ KEYWORDS_TYPE = {
 
 
 # ---------- размещение памяти ----------
+# Код:   0x0000 .. 0x2000  (до 8 КБ = 2048 инструкций)
+# Данные: с 0x2000
 WORD_SIZE   = 4
-DATA_BASE   = 0x1000     # bump-аллокатор для глобалок и фреймов функций
-STR_BUF     = 0x1300     # буфер цифр для print_num
-INTR_VECTOR_TABLE = 0x12F0   # 4 вектора × 4 байта — обязан совпадать с machine.py
-STR_BASE    = 0x1400     # статические pstr-строки
-STACK_INIT  = 0x1800     # начало стека (растёт вверх)
+DATA_BASE   = 0x2000     # bump-аллокатор для глобалок, локалок и массивов
+STR_BUF     = 0x2300     # буфер цифр для print_num
+INTR_VECTOR_TABLE = 0x22F0   # 4 вектора × 4 байта — обязан совпадать с machine.py
+STR_BASE    = 0x2400     # статические pstr-строки
+STACK_INIT  = 0x4000     # начало стека (растёт вверх), память до 0x8000
 
 SP = 7   # R7 — указатель стека
 
@@ -42,6 +44,8 @@ BUILTINS = {
     "disable_interrupts",
     "port_in",
     "port_out",
+    "memread",
+    "memwrite",
 }
 
 
@@ -58,12 +62,24 @@ def tokenize(text):
             continue
         if ch == '"':
             pos += 1
-            start = pos
+            chars = []
             while pos < len(text) and text[pos] != '"':
-                pos += 1
+                if text[pos] == "\\" and pos + 1 < len(text):
+                    nxt = text[pos + 1]
+                    if   nxt == "n":  chars.append("\n")
+                    elif nxt == "t":  chars.append("\t")
+                    elif nxt == "\\": chars.append("\\")
+                    elif nxt == '"':  chars.append('"')
+                    elif nxt == "0":  chars.append("\x00")
+                    else:             chars.append(text[pos:pos+2])
+                    pos += 2
+                else:
+                    chars.append(text[pos])
+                    pos += 1
             if pos >= len(text):
                 raise SyntaxError("незакрытая строка")
-            value = text[start:pos]; pos += 1
+            value = "".join(chars)
+            pos += 1
             tokens.append(("STRING", value)); continue
         if ch.isdigit():
             start = pos
@@ -89,6 +105,8 @@ def tokenize(text):
         if ch == ")": tokens.append(("RPAREN", ch)); pos += 1; continue
         if ch == "{": tokens.append(("LBRACE", ch)); pos += 1; continue
         if ch == "}": tokens.append(("RBRACE", ch)); pos += 1; continue
+        if ch == "[": tokens.append(("LBRACK", ch)); pos += 1; continue
+        if ch == "]": tokens.append(("RBRACK", ch)); pos += 1; continue
         if ch == ",": tokens.append(("COMMA", ch)); pos += 1; continue
         raise SyntaxError(f"непонятный символ: {ch!r}")
     return tokens
@@ -141,6 +159,11 @@ class Parser:
                         args.append(self.parse_cmp())
                 self.expect("RPAREN")
                 return {"type": "FuncCall", "name": tok_value, "args": args}
+            if self.peek()[0] == "LBRACK":
+                self.pos += 1
+                index = self.parse_cmp()
+                self.expect("RBRACK")
+                return {"type": "ArrayIndex", "name": tok_value, "index": index}
             return {"type": "Var", "name": tok_value}
         raise SyntaxError(f"ожидалось число/имя/'(', а тут {tok_type}")
 
@@ -178,14 +201,30 @@ class Parser:
             if self.peek(1)[0] == "LPAREN":
                 call = self.parse_factor()
                 return {"type": "CallStmt", "call": call}
+            if self.peek(1)[0] == "LBRACK":
+                return self.parse_array_assign()
             return self.parse_assign()
         raise SyntaxError(f"неожиданный токен {tok_type}")
 
     def parse_var_decl(self):
         self.expect("VAR")
         name = self.expect("IDENT")
+        if self.peek()[0] == "LBRACK":     # var name[N] — массив фиксированного размера
+            self.pos += 1
+            size = self.expect("NUMBER")
+            self.expect("RBRACK")
+            return {"type": "ArrayDecl", "name": name, "size": size}
         self.expect("ASSIGN")
         return {"type": "VarDecl", "name": name, "value": self.parse_cmp()}
+
+    def parse_array_assign(self):
+        name = self.expect("IDENT")
+        self.expect("LBRACK")
+        index = self.parse_cmp()
+        self.expect("RBRACK")
+        self.expect("ASSIGN")
+        return {"type": "ArrayAssign", "name": name,
+                "index": index, "value": self.parse_cmp()}
 
     def parse_assign(self):
         name = self.expect("IDENT")
@@ -286,6 +325,103 @@ def parse(tokens):
 
 
 # ============================================================
+#                        AST PRETTY-PRINT
+# ============================================================
+# Человекочитаемое представление дерева — для тестов и отладки.
+# Формат: имя узла + ключевые атрибуты, ниже с отступом — дети.
+
+def format_ast(node, indent=0):
+    pad = "  " * indent
+    if not isinstance(node, dict):
+        return f"{pad}<{node!r}>"
+    t = node.get("type", "?")
+
+    if t == "Program":
+        lines = [f"{pad}Program"]
+        if node["functions"]:
+            lines.append(f"{pad}  functions:")
+            for fn in node["functions"]:
+                lines.append(format_ast(fn, indent + 2))
+        lines.append(f"{pad}  body:")
+        for stmt in node["body"]:
+            lines.append(format_ast(stmt, indent + 2))
+        return "\n".join(lines)
+
+    if t == "Num":
+        return f"{pad}Num {node['value']}"
+    if t == "Var":
+        return f"{pad}Var {node['name']}"
+    if t == "BinOp":
+        return (f"{pad}BinOp {node['op']}\n"
+                + format_ast(node["left"], indent + 1) + "\n"
+                + format_ast(node["right"], indent + 1))
+    if t == "VarDecl":
+        return (f"{pad}VarDecl {node['name']} =\n"
+                + format_ast(node["value"], indent + 1))
+    if t == "Assign":
+        return (f"{pad}Assign {node['name']} =\n"
+                + format_ast(node["value"], indent + 1))
+    if t == "ArrayDecl":
+        return f"{pad}ArrayDecl {node['name']}[{node['size']}]"
+    if t == "ArrayIndex":
+        return (f"{pad}ArrayIndex {node['name']}[]\n"
+                + format_ast(node["index"], indent + 1))
+    if t == "ArrayAssign":
+        return (f"{pad}ArrayAssign {node['name']}[]\n"
+                + f"{pad}  index:\n" + format_ast(node["index"], indent + 2) + "\n"
+                + f"{pad}  value:\n" + format_ast(node["value"], indent + 2))
+    if t == "While":
+        lines = [f"{pad}While",
+                 f"{pad}  cond:",
+                 format_ast(node["cond"], indent + 2),
+                 f"{pad}  body:"]
+        for stmt in node["body"]:
+            lines.append(format_ast(stmt, indent + 2))
+        return "\n".join(lines)
+    if t == "If":
+        lines = [f"{pad}If",
+                 f"{pad}  cond:",
+                 format_ast(node["cond"], indent + 2),
+                 f"{pad}  then:"]
+        for stmt in node["then"]:
+            lines.append(format_ast(stmt, indent + 2))
+        if node["else"]:
+            lines.append(f"{pad}  else:")
+            for stmt in node["else"]:
+                lines.append(format_ast(stmt, indent + 2))
+        return "\n".join(lines)
+    if t == "Print":
+        return f"{pad}Print\n" + format_ast(node["expr"], indent + 1)
+    if t == "PrintNum":
+        return f"{pad}PrintNum\n" + format_ast(node["expr"], indent + 1)
+    if t == "PrintStr":
+        return f"{pad}PrintStr {node['value']!r}"
+    if t == "FuncDecl":
+        tag = " [interrupt]" if node.get("is_interrupt") else ""
+        params = ", ".join(node["params"])
+        lines = [f"{pad}FuncDecl {node['name']}({params}){tag}"]
+        for stmt in node["body"]:
+            lines.append(format_ast(stmt, indent + 1))
+        return "\n".join(lines)
+    if t == "FuncCall":
+        lines = [f"{pad}FuncCall {node['name']}"]
+        if node["args"]:
+            for arg in node["args"]:
+                lines.append(format_ast(arg, indent + 1))
+        else:
+            lines[0] += "()"
+        return "\n".join(lines)
+    if t == "CallStmt":
+        return f"{pad}CallStmt\n" + format_ast(node["call"], indent + 1)
+    if t == "Return":
+        if node["value"] is None:
+            return f"{pad}Return"
+        return f"{pad}Return\n" + format_ast(node["value"], indent + 1)
+
+    return f"{pad}<unknown {t}>"
+
+
+# ============================================================
 #                         КОДГЕН
 # ============================================================
 
@@ -293,6 +429,7 @@ class CodeGen:
     def __init__(self):
         self.code = []
         self.global_vars = {}
+        self.arrays = {}        # имя массива -> (base_addr, size)
         self.functions = {}
         self.next_data_addr = DATA_BASE
         self.labels = {}
@@ -331,6 +468,26 @@ class CodeGen:
         if self.next_data_addr > INTR_VECTOR_TABLE:
             raise RuntimeError("переполнение области данных")
         return addr
+
+    def _alloc_array(self, n):
+        base = self.next_data_addr
+        self.next_data_addr += n * WORD_SIZE
+        if self.next_data_addr > INTR_VECTOR_TABLE:
+            raise RuntimeError("переполнение области данных (массив слишком большой)")
+        return base
+
+    def _array_addr_to_r1(self, name, index_node):
+        """Вычисляет адрес elem в R1: addr = base + index*WORD_SIZE.
+        Индекс уже вычисляется выражением; результат остаётся в R1."""
+        if name not in self.arrays:
+            raise RuntimeError(f"массив '{name}' не объявлен")
+        base, _size = self.arrays[name]
+        self.gen_expr(index_node)        # индекс -> стек
+        self.pop(1)                      # R1 = index
+        self.emit(Opcode.LI, rd=2, imm=WORD_SIZE)
+        self.emit(Opcode.MUL, rd=1, rs=2)        # R1 = index*WORD
+        self.emit(Opcode.LI, rd=2, imm=base)
+        self.emit(Opcode.ADD, rd=1, rs=2)        # R1 = base + index*WORD
 
     def declare_local(self, name):
         fn = self.functions[self.current_function]
@@ -380,6 +537,10 @@ class CodeGen:
             self.gen_binop(node["op"]); self.push(1)
         elif t == "FuncCall":
             self.gen_call(node)
+        elif t == "ArrayIndex":
+            self._array_addr_to_r1(node["name"], node["index"])  # R1 = адрес
+            self.emit(Opcode.LD, rd=1, rs=1, imm=0)              # R1 = mem[addr]
+            self.push(1)
         else:
             raise ValueError(f"не умею вычислять {t}")
 
@@ -475,6 +636,23 @@ class CodeGen:
             self.emit(Opcode.OUT, rd=0, rs=1, imm=port)
             self.emit(Opcode.LI, rd=1, imm=0); self.push(1)
 
+        elif name == "memread":
+            if len(args) != 1:
+                raise SyntaxError("memread(addr) требует 1 аргумент")
+            self.gen_expr(args[0]); self.pop(1)       # r1 = addr
+            self.emit(Opcode.LD, rd=1, rs=1, imm=0)   # r1 = mem[r1+0]
+            self.push(1)
+
+        elif name == "memwrite":
+            if len(args) != 2:
+                raise SyntaxError("memwrite(addr, val) требует 2 аргумента")
+            self.gen_expr(args[0]); self.pop(1)       # r1 = addr
+            self.push(1)                              # сохраняем addr
+            self.gen_expr(args[1]); self.pop(2)       # r2 = val
+            self.pop(1)                               # восстанавливаем addr
+            self.emit(Opcode.ST, rd=2, rs=1, imm=0)   # mem[r1+0] = r2
+            self.emit(Opcode.LI, rd=1, imm=0); self.push(1)
+
         else:
             raise RuntimeError(f"неизвестный builtin '{name}'")
 
@@ -486,6 +664,18 @@ class CodeGen:
             addr = (self.declare_local(node["name"]) if self.current_function
                     else self.declare_global(node["name"]))
             self.emit(Opcode.ST, rd=1, rs=0, imm=addr)
+
+        elif t == "ArrayDecl":
+            # массив всегда размещается в глобальной области данных (занулён)
+            if node["name"] not in self.arrays:
+                base = self._alloc_array(node["size"])
+                self.arrays[node["name"]] = (base, node["size"])
+
+        elif t == "ArrayAssign":
+            self.gen_expr(node["value"])                      # значение -> стек
+            self._array_addr_to_r1(node["name"], node["index"])  # R1 = адрес
+            self.pop(2)                                       # R2 = значение
+            self.emit(Opcode.ST, rd=2, rs=1, imm=0)           # mem[addr] = R2
 
         elif t == "Assign":
             self.gen_expr(node["value"]); self.pop(1)
@@ -558,6 +748,20 @@ class CodeGen:
     # ---------- print_num ----------
     def gen_print_num(self):
         zero_skip = self.new_label("pn_zero_skip"); end_lbl = self.new_label("pn_end")
+        skip_neg = self.new_label("pn_skip_neg")
+        # если n < 0 — печатаем '-' и берём |n|
+        self.emit(Opcode.LI, rd=2, imm=0)
+        self.emit(Opcode.CMP, rd=1, rs=2)
+        self.emit_jump(Opcode.JGE, skip_neg)
+        self.emit(Opcode.LI, rd=2, imm=45)           # код '-'
+        self.emit(Opcode.OUT, rd=0, rs=2, imm=PORT_STDOUT)
+        # r1 = 0 - r1   (через r2=0; r2-=r1; r1=0; r1+=r2)
+        self.emit(Opcode.LI, rd=2, imm=0)
+        self.emit(Opcode.SUB, rd=2, rs=1)
+        self.emit(Opcode.LI, rd=1, imm=0)
+        self.emit(Opcode.ADD, rd=1, rs=2)
+        self.place_label(skip_neg)
+        # дальше обычная схема: zero-case, потом разбор цифр
         self.emit(Opcode.LI, rd=2, imm=0)
         self.emit(Opcode.CMP, rd=1, rs=2)
         self.emit_jump(Opcode.JNZ, zero_skip)
@@ -706,6 +910,53 @@ def write_listing_full(filename, code, data_section, start_addr=0):
                 f.write(f"{addr:04X} - {blob.hex().upper()} - {descr}\n")
 
 
+def build_listing_string(code, data_section, start_addr=0):
+    """То же, что write_listing_full, но возвращает строку (для тестов)."""
+    lines = ["== CODE =="]
+    for i, (opcode, rd, rs, imm) in enumerate(code):
+        raw = encode(opcode, rd, rs, imm)
+        addr = start_addr + i * INSTR_SIZE
+        lines.append(f"{addr:04X} - {raw.hex().upper()} - {_mnemonic(opcode, rd, rs, imm)}")
+    if data_section:
+        lines.append("")
+        lines.append("== DATA ==")
+        for addr in sorted(data_section.keys()):
+            blob = data_section[addr]
+            if len(blob) == WORD_SIZE:
+                val = int.from_bytes(blob, "little", signed=False)
+                descr = f".word {val}  ; '{chr(val)}'" if 32 <= val < 127 else f".word {val}"
+            else:
+                descr = f".bytes len={len(blob)}"
+            lines.append(f"{addr:04X} - {blob.hex().upper()} - {descr}")
+    return "\n".join(lines) + "\n"
+
+
+def translate_source(text):
+    """Компилирует исходник из строки. Возвращает (image_bytes, listing_str, ast)."""
+    tokens = tokenize(text)
+    tree = parse(tokens)
+
+    cg = CodeGen()
+    code = cg.generate(tree)
+    data = cg.data_section
+
+    code_size = len(code) * INSTR_SIZE
+    if data:
+        max_data_end = max(addr + len(blob) for addr, blob in data.items())
+        image_size = max(code_size, max_data_end)
+    else:
+        image_size = code_size
+
+    image = bytearray(image_size)
+    for i, (opcode, rd, rs, imm) in enumerate(code):
+        image[i * INSTR_SIZE:(i + 1) * INSTR_SIZE] = encode(opcode, rd, rs, imm)
+    for addr, blob in data.items():
+        image[addr:addr + len(blob)] = blob
+
+    listing = build_listing_string(code, data)
+    return bytes(image), listing, tree
+
+
 def translate_file(source_path, output_path):
     with open(source_path, "r", encoding="utf-8") as f:
         text = f.read()
@@ -735,13 +986,18 @@ def translate_file(source_path, output_path):
     listing_path = os.path.splitext(output_path)[0] + ".lst"
     write_listing_full(listing_path, code, data)
 
+    # AST в человекочитаемом виде — для тестов и отладки
+    ast_path = os.path.splitext(output_path)[0] + ".ast"
+    with open(ast_path, "w", encoding="utf-8") as f:
+        f.write(format_ast(tree) + "\n")
+
     data_bytes = sum(len(b) for b in data.values())
     isr_count = sum(1 for f in cg.functions.values() if f["is_interrupt"])
     print(f"OK: {source_path} -> {output_path}  "
           f"(код: {len(code)} инструкций / {code_size} B, "
           f"данные: {data_bytes} B, образ: {image_size} B, "
           f"функций: {len(cg.functions)} из них ISR: {isr_count}), "
-          f"листинг: {listing_path}")
+          f"артефакты: {listing_path}, {ast_path}")
 
 
 if __name__ == "__main__":

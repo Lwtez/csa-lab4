@@ -1,13 +1,26 @@
+import logging
+
 from isa import decode, read_image, Opcode, INSTR_SIZE, mnemonic
 
-MEM_SIZE = 8192          # размер единой памяти в байтах
+LOG = logging.getLogger("machine:simulation")
+
+MEM_SIZE = 32768        
 TICK_LIMIT = 200_000_000
+
+
+def _mask32(x):
+    """Приводит x к 32-битному знаковому диапазону (two's complement).
+    Имитирует переполнение."""
+    x = x & 0xFFFFFFFF
+    if x & 0x80000000:
+        x -= 0x100000000
+    return x
 
 # === таблица векторов прерываний ================================
 # Адрес обработчика для вектора N лежит в cell INTR_VECTOR_TABLE + N*4.
 # По умолчанию все cell'ы = 0 (т.к. память bytearray занулена).
 # Программист устанавливает обработчик через set_interrupt_handler(N, fn).
-INTR_VECTOR_TABLE = 0x12F0
+INTR_VECTOR_TABLE = 0x22F0
 KEYBOARD_VEC      = 0    # вектор клавиатуры
 
 # ====== состояния процессора =====================================
@@ -97,7 +110,13 @@ def run(image_bytes, schedule=None, verbose=True, log_stream=None):
     def log(phase, message):
         if not verbose:
             return
-        print(f"[tick {tick:6}] {cpu_state()} {phase} | {message}", file=log_stream)
+        regs = " ".join(f"R{i}={registers[i]}" for i in range(8))
+        flags = f"ZF={int(zero_flag)} NF={int(neg_flag)}"
+        pending = [t for (t, _c) in schedule]   # такты ещё не пришедшего ввода
+        LOG.debug(
+            f"TICK: {tick:6} {cpu_state()} {phase} | {message} | "
+            f"{regs} {flags}\tinput {pending}"
+        )
 
     def _char_repr(c):
         return f"'{chr(c)}'" if 32 <= c < 127 else f"\\x{c:02X}"
@@ -161,27 +180,27 @@ def run(image_bytes, schedule=None, verbose=True, log_stream=None):
         effect = ""    # описание эффекта инструкции для лога
 
         if opcode == Opcode.ADD:
-            registers[rd] = registers[rd] + registers[rs]
+            registers[rd] = _mask32(registers[rd] + registers[rs])
             zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
             effect = f"R{rd} := {registers[rd]}"
         elif opcode == Opcode.SUB:
-            registers[rd] = registers[rd] - registers[rs]
+            registers[rd] = _mask32(registers[rd] - registers[rs])
             zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
             effect = f"R{rd} := {registers[rd]}"
         elif opcode == Opcode.MUL:
-            registers[rd] = registers[rd] * registers[rs]
+            registers[rd] = _mask32(registers[rd] * registers[rs])
             zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
             effect = f"R{rd} := {registers[rd]}"
         elif opcode == Opcode.DIV:
-            registers[rd] = registers[rd] // registers[rs]
+            registers[rd] = _mask32(registers[rd] // registers[rs])
             zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
             effect = f"R{rd} := {registers[rd]}"
         elif opcode == Opcode.MOD:
-            registers[rd] = registers[rd] % registers[rs]
+            registers[rd] = _mask32(registers[rd] % registers[rs])
             zero_flag = (registers[rd] == 0); neg_flag = (registers[rd] < 0)
             effect = f"R{rd} := {registers[rd]}"
         elif opcode == Opcode.CMP:
-            result = registers[rd] - registers[rs]
+            result = _mask32(registers[rd] - registers[rs])
             zero_flag = (result == 0); neg_flag = (result < 0)
             effect = f"R{rd} - R{rs} = {result}"
 
@@ -251,9 +270,8 @@ def run(image_bytes, schedule=None, verbose=True, log_stream=None):
         else:
             raise ValueError(f"неизвестный опкод {opcode}")
 
-        flags = f"ZF={int(zero_flag)} NF={int(neg_flag)}"
         log(PHASE_EXEC,
-            f"PC=0x{ir_pc:04X} | {mnem:<28} | {effect:<40} | {flags}")
+            f"PC=0x{ir_pc:04X} | {mnem:<28} | {effect:<40}")
 
         tick += 1
         stage = PHASE_FETCH
@@ -276,6 +294,29 @@ def run(image_bytes, schedule=None, verbose=True, log_stream=None):
               file=log_stream)
 
     return io.out_buf
+
+
+def parse_schedule(text):
+    """Разбирает расписание ввода из текста вида `<такт> <символ>` по строкам.
+    Возвращает список (tick, code). Поддерживает '\\n', '\\0' и числовые коды."""
+    schedule = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split(maxsplit=1)
+        t = int(parts[0])
+        char = parts[1]
+        if char == "\\n":
+            code = 10
+        elif char == "\\0":
+            code = 0
+        elif char.isdigit() and len(char) > 1:
+            code = int(char)
+        else:
+            code = ord(char[0])
+        schedule.append((t, code))
+    return schedule
 
 
 if __name__ == "__main__":
@@ -312,29 +353,24 @@ if __name__ == "__main__":
     if len(positional) > 1:
         input_file = positional[1]
         with open(input_file, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                parts = line.split(maxsplit=1)
-                t = int(parts[0])
-                char = parts[1]
-                if char == "\\n":
-                    code = 10
-                elif char.isdigit() and len(char) > 1:
-                    code = int(char)
-                else:
-                    code = ord(char[0])
-                schedule.append((t, code))
+            schedule = parse_schedule(f.read())
 
-    log_stream = None
+    LOG_FORMAT = "%(levelname)-7s %(name)s    %(message)s"
+    handlers = []
     if log_path:
-        log_stream = open(log_path, "w", encoding="utf-8")
+        handlers.append(logging.FileHandler(log_path, mode="w", encoding="utf-8"))
+    else:
+        handlers.append(logging.StreamHandler(sys.stderr))
+    logging.basicConfig(
+        level=logging.WARNING if quiet else logging.DEBUG,
+        format=LOG_FORMAT,
+        handlers=handlers,
+    )
 
-    output = run(image, schedule=schedule, verbose=not quiet, log_stream=log_stream)
+    output = run(image, schedule=schedule, verbose=not quiet)
 
-    if log_stream:
-        log_stream.close()
+    if log_path:
+        logging.shutdown()
         print(f"журнал записан в: {log_path}")
 
     print("OUTPUT:", "".join(chr(c) if 32 <= c < 127 else f"<{c}>" for c in output))

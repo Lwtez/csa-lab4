@@ -1,0 +1,1558 @@
+in_source: |
+  // Двойная точность: 64-битные числа на 32-битной машине.
+  // 64-битное число = 4 лимба по 16 бит, база B = 65536, лимбы l0..l3 (l0 — младший).
+  // B не влезает в 16-битный immediate, поэтому собираем как 256 * 256.
+  var B = 256
+  B = B * 256
+
+  // A = 0x0001_0000_FFFF_FFFF  (лимбы lo..hi: FFFF FFFF 0000 0001)
+  var a0 = B - 1
+  var a1 = B - 1
+  var a2 = 0
+  var a3 = 1
+  // C = 0x0000_0000_0000_0002
+  var c0 = 2
+  var c1 = 0
+  var c2 = 0
+  var c3 = 0
+
+  // --- сложение 64-бит по лимбам с переносом ---
+  var carry = 0
+  var s0 = a0 + c0 + carry
+  carry = s0 / B
+  s0 = s0 % B
+  var s1 = a1 + c1 + carry
+  carry = s1 / B
+  s1 = s1 % B
+  var s2 = a2 + c2 + carry
+  carry = s2 / B
+  s2 = s2 % B
+  var s3 = a3 + c3 + carry
+  s3 = s3 % B
+
+  print_str ( "A+C limbs hi..lo: " )
+  print_num ( s3 )
+  print ( 32 )
+  print_num ( s2 )
+  print ( 32 )
+  print_num ( s1 )
+  print ( 32 )
+  print_num ( s0 )
+  print ( 10 )
+
+  // --- умножение 64-бит на маленькую константу k = 3 ---
+  var k = 3
+  carry = 0
+  var m0 = a0 * k + carry
+  carry = m0 / B
+  m0 = m0 % B
+  var m1 = a1 * k + carry
+  carry = m1 / B
+  m1 = m1 % B
+  var m2 = a2 * k + carry
+  carry = m2 / B
+  m2 = m2 % B
+  var m3 = a3 * k + carry
+  m3 = m3 % B
+
+  print_str ( "A*3 limbs hi..lo: " )
+  print_num ( m3 )
+  print ( 32 )
+  print_num ( m2 )
+  print ( 32 )
+  print_num ( m1 )
+  print ( 32 )
+  print_num ( m0 )
+in_log_max_lines: 80
+in_stdin: ''
+out_log: |
+  DEBUG   machine:simulation    TICK:      0 RUN  FETCH | PC=0x0000 | IR=0x0A000004 (jmp 0x0004) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=0 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      1 RUN  EXEC  | PC=0x0000 | jmp 0x0004                   | PC := 0x0004                             | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=0 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      2 RUN  FETCH | PC=0x0004 | IR=0x09704000 (li r7, #16384) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=0 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      3 RUN  EXEC  | PC=0x0004 | li r7, #16384                | R7 := 16384                              | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      4 RUN  FETCH | PC=0x0008 | IR=0x09100100 (li r1, #256) | R0=0 R1=0 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      5 RUN  EXEC  | PC=0x0008 | li r1, #256                  | R1 := 256                                | R0=0 R1=256 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      6 RUN  FETCH | PC=0x000C | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=256 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      7 RUN  EXEC  | PC=0x000C | st r1, [r7+0x0]              | mem[0x4000] := 256                       | R0=0 R1=256 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      8 RUN  FETCH | PC=0x0010 | IR=0x09300004 (li r3, #4) | R0=0 R1=256 R2=0 R3=0 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:      9 RUN  EXEC  | PC=0x0010 | li r3, #4                    | R3 := 4                                  | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     10 RUN  FETCH | PC=0x0014 | IR=0x01730000 (add r7, r3) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     11 RUN  EXEC  | PC=0x0014 | add r7, r3                   | R7 := 16388                              | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     12 RUN  FETCH | PC=0x0018 | IR=0x09300004 (li r3, #4) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     13 RUN  EXEC  | PC=0x0018 | li r3, #4                    | R3 := 4                                  | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     14 RUN  FETCH | PC=0x001C | IR=0x02730000 (sub r7, r3) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     15 RUN  EXEC  | PC=0x001C | sub r7, r3                   | R7 := 16384                              | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     16 RUN  FETCH | PC=0x0020 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     17 RUN  EXEC  | PC=0x0020 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 256                  | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     18 RUN  FETCH | PC=0x0024 | IR=0x08102000 (st r1, [r0+0x2000]) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     19 RUN  EXEC  | PC=0x0024 | st r1, [r0+0x2000]           | mem[0x2000] := 256                       | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     20 RUN  FETCH | PC=0x0028 | IR=0x07102000 (ld r1, [r0+0x2000]) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     21 RUN  EXEC  | PC=0x0028 | ld r1, [r0+0x2000]           | R1 := mem[0x2000] = 256                  | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     22 RUN  FETCH | PC=0x002C | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     23 RUN  EXEC  | PC=0x002C | st r1, [r7+0x0]              | mem[0x4000] := 256                       | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     24 RUN  FETCH | PC=0x0030 | IR=0x09300004 (li r3, #4) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     25 RUN  EXEC  | PC=0x0030 | li r3, #4                    | R3 := 4                                  | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     26 RUN  FETCH | PC=0x0034 | IR=0x01730000 (add r7, r3) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     27 RUN  EXEC  | PC=0x0034 | add r7, r3                   | R7 := 16388                              | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     28 RUN  FETCH | PC=0x0038 | IR=0x09100100 (li r1, #256) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     29 RUN  EXEC  | PC=0x0038 | li r1, #256                  | R1 := 256                                | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     30 RUN  FETCH | PC=0x003C | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     31 RUN  EXEC  | PC=0x003C | st r1, [r7+0x0]              | mem[0x4004] := 256                       | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     32 RUN  FETCH | PC=0x0040 | IR=0x09300004 (li r3, #4) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     33 RUN  EXEC  | PC=0x0040 | li r3, #4                    | R3 := 4                                  | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     34 RUN  FETCH | PC=0x0044 | IR=0x01730000 (add r7, r3) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     35 RUN  EXEC  | PC=0x0044 | add r7, r3                   | R7 := 16392                              | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     36 RUN  FETCH | PC=0x0048 | IR=0x09300004 (li r3, #4) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     37 RUN  EXEC  | PC=0x0048 | li r3, #4                    | R3 := 4                                  | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     38 RUN  FETCH | PC=0x004C | IR=0x02730000 (sub r7, r3) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16392 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     39 RUN  EXEC  | PC=0x004C | sub r7, r3                   | R7 := 16388                              | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     40 RUN  FETCH | PC=0x0050 | IR=0x07270000 (ld r2, [r7+0x0]) | R0=0 R1=256 R2=0 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     41 RUN  EXEC  | PC=0x0050 | ld r2, [r7+0x0]              | R2 := mem[0x4004] = 256                  | R0=0 R1=256 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     42 RUN  FETCH | PC=0x0054 | IR=0x09300004 (li r3, #4) | R0=0 R1=256 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     43 RUN  EXEC  | PC=0x0054 | li r3, #4                    | R3 := 4                                  | R0=0 R1=256 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     44 RUN  FETCH | PC=0x0058 | IR=0x02730000 (sub r7, r3) | R0=0 R1=256 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     45 RUN  EXEC  | PC=0x0058 | sub r7, r3                   | R7 := 16384                              | R0=0 R1=256 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     46 RUN  FETCH | PC=0x005C | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=256 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     47 RUN  EXEC  | PC=0x005C | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 256                  | R0=0 R1=256 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     48 RUN  FETCH | PC=0x0060 | IR=0x03120000 (mul r1, r2) | R0=0 R1=256 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     49 RUN  EXEC  | PC=0x0060 | mul r1, r2                   | R1 := 65536                              | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     50 RUN  FETCH | PC=0x0064 | IR=0x08170000 (st r1, [r7+0x0]) | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     51 RUN  EXEC  | PC=0x0064 | st r1, [r7+0x0]              | mem[0x4000] := 65536                     | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     52 RUN  FETCH | PC=0x0068 | IR=0x09300004 (li r3, #4) | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     53 RUN  EXEC  | PC=0x0068 | li r3, #4                    | R3 := 4                                  | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     54 RUN  FETCH | PC=0x006C | IR=0x01730000 (add r7, r3) | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     55 RUN  EXEC  | PC=0x006C | add r7, r3                   | R7 := 16388                              | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     56 RUN  FETCH | PC=0x0070 | IR=0x09300004 (li r3, #4) | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     57 RUN  EXEC  | PC=0x0070 | li r3, #4                    | R3 := 4                                  | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     58 RUN  FETCH | PC=0x0074 | IR=0x02730000 (sub r7, r3) | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16388 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     59 RUN  EXEC  | PC=0x0074 | sub r7, r3                   | R7 := 16384                              | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     60 RUN  FETCH | PC=0x0078 | IR=0x07170000 (ld r1, [r7+0x0]) | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     61 RUN  EXEC  | PC=0x0078 | ld r1, [r7+0x0]              | R1 := mem[0x4000] = 65536                | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     62 RUN  FETCH | PC=0x007C | IR=0x08102000 (st r1, [r0+0x2000]) | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     63 RUN  EXEC  | PC=0x007C | st r1, [r0+0x2000]           | mem[0x2000] := 65536                     | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  DEBUG   machine:simulation    TICK:     64 RUN  FETCH | PC=0x0080 | IR=0x07102000 (ld r1, [r0+0x2000]) | R0=0 R1=65536 R2=256 R3=4 R4=0 R5=0 R6=0 R7=16384 ZF=0 NF=0	input []
+  ... (пропущено 3052 строк журнала) ...
+  DEBUG   machine:simulation    TICK:   3117 RUN  EXEC  | PC=0x1288 | sub r4, r2                   | R4 := 0                                  | R0=0 R1=0 R2=4 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3118 RUN  FETCH | PC=0x128C | IR=0x07342300 (ld r3, [r4+0x2300]) | R0=0 R1=0 R2=4 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3119 RUN  EXEC  | PC=0x128C | ld r3, [r4+0x2300]           | R3 := mem[0x2300] = 51                   | R0=0 R1=0 R2=4 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3120 RUN  FETCH | PC=0x1290 | IR=0x12030001 (out r3, port#1) | R0=0 R1=0 R2=4 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3121 RUN  EXEC  | PC=0x1290 | out r3, port#1               | port#1 <= 0x33 ('3')                     | R0=0 R1=0 R2=4 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3122 RUN  FETCH | PC=0x1294 | IR=0x0A001278 (jmp 0x1278) | R0=0 R1=0 R2=4 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3123 RUN  EXEC  | PC=0x1294 | jmp 0x1278                   | PC := 0x1278                             | R0=0 R1=0 R2=4 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3124 RUN  FETCH | PC=0x1278 | IR=0x09200000 (li r2, #0) | R0=0 R1=0 R2=4 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3125 RUN  EXEC  | PC=0x1278 | li r2, #0                    | R2 := 0                                  | R0=0 R1=0 R2=0 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3126 RUN  FETCH | PC=0x127C | IR=0x06420000 (cmp r4, r2) | R0=0 R1=0 R2=0 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3127 RUN  EXEC  | PC=0x127C | cmp r4, r2                   | R4 - R2 = 0                              | R0=0 R1=0 R2=0 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3128 RUN  FETCH | PC=0x1280 | IR=0x0B001298 (jz 0x1298) | R0=0 R1=0 R2=0 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3129 RUN  EXEC  | PC=0x1280 | jz 0x1298                    | taken, PC := 0x1298                      | R0=0 R1=0 R2=0 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3130 RUN  FETCH | PC=0x1298 | IR=0x13000000 (halt) | R0=0 R1=0 R2=0 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+  DEBUG   machine:simulation    TICK:   3131 STOP EXEC  | PC=0x1298 | halt                         | (stop)                                   | R0=0 R1=0 R2=0 R3=51 R4=0 R5=72 R6=0 R7=16384 ZF=1 NF=0	input []
+out_stdout: |2
+
+  --- summary ---
+  ticks executed: 3132
+  instructions:   1566
+  interrupts:     0
+  output (59 bytes): A+C limbs hi..lo: 1 1 0 1<0A>A*3 limbs hi..lo: 3 2 65535 65533
+  final regs:     R0=0 R1=0 R2=0 R3=51 R4=0 R5=72 R6=0 R7=16384
+  final flags:    ZF=1 NF=0
+out_output: 'A+C limbs hi..lo: 1 1 0 1<10>A*3 limbs hi..lo: 3 2 65535 65533'
+out_listing: |
+  == CODE ==
+  0000 - 0A000004 - jmp 0x0004
+  0004 - 09704000 - li r7, #16384
+  0008 - 09100100 - li r1, #256
+  000C - 08170000 - st r1, [r7+0x0]
+  0010 - 09300004 - li r3, #4
+  0014 - 01730000 - add r7, r3
+  0018 - 09300004 - li r3, #4
+  001C - 02730000 - sub r7, r3
+  0020 - 07170000 - ld r1, [r7+0x0]
+  0024 - 08102000 - st r1, [r0+0x2000]
+  0028 - 07102000 - ld r1, [r0+0x2000]
+  002C - 08170000 - st r1, [r7+0x0]
+  0030 - 09300004 - li r3, #4
+  0034 - 01730000 - add r7, r3
+  0038 - 09100100 - li r1, #256
+  003C - 08170000 - st r1, [r7+0x0]
+  0040 - 09300004 - li r3, #4
+  0044 - 01730000 - add r7, r3
+  0048 - 09300004 - li r3, #4
+  004C - 02730000 - sub r7, r3
+  0050 - 07270000 - ld r2, [r7+0x0]
+  0054 - 09300004 - li r3, #4
+  0058 - 02730000 - sub r7, r3
+  005C - 07170000 - ld r1, [r7+0x0]
+  0060 - 03120000 - mul r1, r2
+  0064 - 08170000 - st r1, [r7+0x0]
+  0068 - 09300004 - li r3, #4
+  006C - 01730000 - add r7, r3
+  0070 - 09300004 - li r3, #4
+  0074 - 02730000 - sub r7, r3
+  0078 - 07170000 - ld r1, [r7+0x0]
+  007C - 08102000 - st r1, [r0+0x2000]
+  0080 - 07102000 - ld r1, [r0+0x2000]
+  0084 - 08170000 - st r1, [r7+0x0]
+  0088 - 09300004 - li r3, #4
+  008C - 01730000 - add r7, r3
+  0090 - 09100001 - li r1, #1
+  0094 - 08170000 - st r1, [r7+0x0]
+  0098 - 09300004 - li r3, #4
+  009C - 01730000 - add r7, r3
+  00A0 - 09300004 - li r3, #4
+  00A4 - 02730000 - sub r7, r3
+  00A8 - 07270000 - ld r2, [r7+0x0]
+  00AC - 09300004 - li r3, #4
+  00B0 - 02730000 - sub r7, r3
+  00B4 - 07170000 - ld r1, [r7+0x0]
+  00B8 - 02120000 - sub r1, r2
+  00BC - 08170000 - st r1, [r7+0x0]
+  00C0 - 09300004 - li r3, #4
+  00C4 - 01730000 - add r7, r3
+  00C8 - 09300004 - li r3, #4
+  00CC - 02730000 - sub r7, r3
+  00D0 - 07170000 - ld r1, [r7+0x0]
+  00D4 - 08102004 - st r1, [r0+0x2004]
+  00D8 - 07102000 - ld r1, [r0+0x2000]
+  00DC - 08170000 - st r1, [r7+0x0]
+  00E0 - 09300004 - li r3, #4
+  00E4 - 01730000 - add r7, r3
+  00E8 - 09100001 - li r1, #1
+  00EC - 08170000 - st r1, [r7+0x0]
+  00F0 - 09300004 - li r3, #4
+  00F4 - 01730000 - add r7, r3
+  00F8 - 09300004 - li r3, #4
+  00FC - 02730000 - sub r7, r3
+  0100 - 07270000 - ld r2, [r7+0x0]
+  0104 - 09300004 - li r3, #4
+  0108 - 02730000 - sub r7, r3
+  010C - 07170000 - ld r1, [r7+0x0]
+  0110 - 02120000 - sub r1, r2
+  0114 - 08170000 - st r1, [r7+0x0]
+  0118 - 09300004 - li r3, #4
+  011C - 01730000 - add r7, r3
+  0120 - 09300004 - li r3, #4
+  0124 - 02730000 - sub r7, r3
+  0128 - 07170000 - ld r1, [r7+0x0]
+  012C - 08102008 - st r1, [r0+0x2008]
+  0130 - 09100000 - li r1, #0
+  0134 - 08170000 - st r1, [r7+0x0]
+  0138 - 09300004 - li r3, #4
+  013C - 01730000 - add r7, r3
+  0140 - 09300004 - li r3, #4
+  0144 - 02730000 - sub r7, r3
+  0148 - 07170000 - ld r1, [r7+0x0]
+  014C - 0810200C - st r1, [r0+0x200C]
+  0150 - 09100001 - li r1, #1
+  0154 - 08170000 - st r1, [r7+0x0]
+  0158 - 09300004 - li r3, #4
+  015C - 01730000 - add r7, r3
+  0160 - 09300004 - li r3, #4
+  0164 - 02730000 - sub r7, r3
+  0168 - 07170000 - ld r1, [r7+0x0]
+  016C - 08102010 - st r1, [r0+0x2010]
+  0170 - 09100002 - li r1, #2
+  0174 - 08170000 - st r1, [r7+0x0]
+  0178 - 09300004 - li r3, #4
+  017C - 01730000 - add r7, r3
+  0180 - 09300004 - li r3, #4
+  0184 - 02730000 - sub r7, r3
+  0188 - 07170000 - ld r1, [r7+0x0]
+  018C - 08102014 - st r1, [r0+0x2014]
+  0190 - 09100000 - li r1, #0
+  0194 - 08170000 - st r1, [r7+0x0]
+  0198 - 09300004 - li r3, #4
+  019C - 01730000 - add r7, r3
+  01A0 - 09300004 - li r3, #4
+  01A4 - 02730000 - sub r7, r3
+  01A8 - 07170000 - ld r1, [r7+0x0]
+  01AC - 08102018 - st r1, [r0+0x2018]
+  01B0 - 09100000 - li r1, #0
+  01B4 - 08170000 - st r1, [r7+0x0]
+  01B8 - 09300004 - li r3, #4
+  01BC - 01730000 - add r7, r3
+  01C0 - 09300004 - li r3, #4
+  01C4 - 02730000 - sub r7, r3
+  01C8 - 07170000 - ld r1, [r7+0x0]
+  01CC - 0810201C - st r1, [r0+0x201C]
+  01D0 - 09100000 - li r1, #0
+  01D4 - 08170000 - st r1, [r7+0x0]
+  01D8 - 09300004 - li r3, #4
+  01DC - 01730000 - add r7, r3
+  01E0 - 09300004 - li r3, #4
+  01E4 - 02730000 - sub r7, r3
+  01E8 - 07170000 - ld r1, [r7+0x0]
+  01EC - 08102020 - st r1, [r0+0x2020]
+  01F0 - 09100000 - li r1, #0
+  01F4 - 08170000 - st r1, [r7+0x0]
+  01F8 - 09300004 - li r3, #4
+  01FC - 01730000 - add r7, r3
+  0200 - 09300004 - li r3, #4
+  0204 - 02730000 - sub r7, r3
+  0208 - 07170000 - ld r1, [r7+0x0]
+  020C - 08102024 - st r1, [r0+0x2024]
+  0210 - 07102004 - ld r1, [r0+0x2004]
+  0214 - 08170000 - st r1, [r7+0x0]
+  0218 - 09300004 - li r3, #4
+  021C - 01730000 - add r7, r3
+  0220 - 07102014 - ld r1, [r0+0x2014]
+  0224 - 08170000 - st r1, [r7+0x0]
+  0228 - 09300004 - li r3, #4
+  022C - 01730000 - add r7, r3
+  0230 - 09300004 - li r3, #4
+  0234 - 02730000 - sub r7, r3
+  0238 - 07270000 - ld r2, [r7+0x0]
+  023C - 09300004 - li r3, #4
+  0240 - 02730000 - sub r7, r3
+  0244 - 07170000 - ld r1, [r7+0x0]
+  0248 - 01120000 - add r1, r2
+  024C - 08170000 - st r1, [r7+0x0]
+  0250 - 09300004 - li r3, #4
+  0254 - 01730000 - add r7, r3
+  0258 - 07102024 - ld r1, [r0+0x2024]
+  025C - 08170000 - st r1, [r7+0x0]
+  0260 - 09300004 - li r3, #4
+  0264 - 01730000 - add r7, r3
+  0268 - 09300004 - li r3, #4
+  026C - 02730000 - sub r7, r3
+  0270 - 07270000 - ld r2, [r7+0x0]
+  0274 - 09300004 - li r3, #4
+  0278 - 02730000 - sub r7, r3
+  027C - 07170000 - ld r1, [r7+0x0]
+  0280 - 01120000 - add r1, r2
+  0284 - 08170000 - st r1, [r7+0x0]
+  0288 - 09300004 - li r3, #4
+  028C - 01730000 - add r7, r3
+  0290 - 09300004 - li r3, #4
+  0294 - 02730000 - sub r7, r3
+  0298 - 07170000 - ld r1, [r7+0x0]
+  029C - 08102028 - st r1, [r0+0x2028]
+  02A0 - 07102028 - ld r1, [r0+0x2028]
+  02A4 - 08170000 - st r1, [r7+0x0]
+  02A8 - 09300004 - li r3, #4
+  02AC - 01730000 - add r7, r3
+  02B0 - 07102000 - ld r1, [r0+0x2000]
+  02B4 - 08170000 - st r1, [r7+0x0]
+  02B8 - 09300004 - li r3, #4
+  02BC - 01730000 - add r7, r3
+  02C0 - 09300004 - li r3, #4
+  02C4 - 02730000 - sub r7, r3
+  02C8 - 07270000 - ld r2, [r7+0x0]
+  02CC - 09300004 - li r3, #4
+  02D0 - 02730000 - sub r7, r3
+  02D4 - 07170000 - ld r1, [r7+0x0]
+  02D8 - 04120000 - div r1, r2
+  02DC - 08170000 - st r1, [r7+0x0]
+  02E0 - 09300004 - li r3, #4
+  02E4 - 01730000 - add r7, r3
+  02E8 - 09300004 - li r3, #4
+  02EC - 02730000 - sub r7, r3
+  02F0 - 07170000 - ld r1, [r7+0x0]
+  02F4 - 08102024 - st r1, [r0+0x2024]
+  02F8 - 07102028 - ld r1, [r0+0x2028]
+  02FC - 08170000 - st r1, [r7+0x0]
+  0300 - 09300004 - li r3, #4
+  0304 - 01730000 - add r7, r3
+  0308 - 07102000 - ld r1, [r0+0x2000]
+  030C - 08170000 - st r1, [r7+0x0]
+  0310 - 09300004 - li r3, #4
+  0314 - 01730000 - add r7, r3
+  0318 - 09300004 - li r3, #4
+  031C - 02730000 - sub r7, r3
+  0320 - 07270000 - ld r2, [r7+0x0]
+  0324 - 09300004 - li r3, #4
+  0328 - 02730000 - sub r7, r3
+  032C - 07170000 - ld r1, [r7+0x0]
+  0330 - 05120000 - mod r1, r2
+  0334 - 08170000 - st r1, [r7+0x0]
+  0338 - 09300004 - li r3, #4
+  033C - 01730000 - add r7, r3
+  0340 - 09300004 - li r3, #4
+  0344 - 02730000 - sub r7, r3
+  0348 - 07170000 - ld r1, [r7+0x0]
+  034C - 08102028 - st r1, [r0+0x2028]
+  0350 - 07102008 - ld r1, [r0+0x2008]
+  0354 - 08170000 - st r1, [r7+0x0]
+  0358 - 09300004 - li r3, #4
+  035C - 01730000 - add r7, r3
+  0360 - 07102018 - ld r1, [r0+0x2018]
+  0364 - 08170000 - st r1, [r7+0x0]
+  0368 - 09300004 - li r3, #4
+  036C - 01730000 - add r7, r3
+  0370 - 09300004 - li r3, #4
+  0374 - 02730000 - sub r7, r3
+  0378 - 07270000 - ld r2, [r7+0x0]
+  037C - 09300004 - li r3, #4
+  0380 - 02730000 - sub r7, r3
+  0384 - 07170000 - ld r1, [r7+0x0]
+  0388 - 01120000 - add r1, r2
+  038C - 08170000 - st r1, [r7+0x0]
+  0390 - 09300004 - li r3, #4
+  0394 - 01730000 - add r7, r3
+  0398 - 07102024 - ld r1, [r0+0x2024]
+  039C - 08170000 - st r1, [r7+0x0]
+  03A0 - 09300004 - li r3, #4
+  03A4 - 01730000 - add r7, r3
+  03A8 - 09300004 - li r3, #4
+  03AC - 02730000 - sub r7, r3
+  03B0 - 07270000 - ld r2, [r7+0x0]
+  03B4 - 09300004 - li r3, #4
+  03B8 - 02730000 - sub r7, r3
+  03BC - 07170000 - ld r1, [r7+0x0]
+  03C0 - 01120000 - add r1, r2
+  03C4 - 08170000 - st r1, [r7+0x0]
+  03C8 - 09300004 - li r3, #4
+  03CC - 01730000 - add r7, r3
+  03D0 - 09300004 - li r3, #4
+  03D4 - 02730000 - sub r7, r3
+  03D8 - 07170000 - ld r1, [r7+0x0]
+  03DC - 0810202C - st r1, [r0+0x202C]
+  03E0 - 0710202C - ld r1, [r0+0x202C]
+  03E4 - 08170000 - st r1, [r7+0x0]
+  03E8 - 09300004 - li r3, #4
+  03EC - 01730000 - add r7, r3
+  03F0 - 07102000 - ld r1, [r0+0x2000]
+  03F4 - 08170000 - st r1, [r7+0x0]
+  03F8 - 09300004 - li r3, #4
+  03FC - 01730000 - add r7, r3
+  0400 - 09300004 - li r3, #4
+  0404 - 02730000 - sub r7, r3
+  0408 - 07270000 - ld r2, [r7+0x0]
+  040C - 09300004 - li r3, #4
+  0410 - 02730000 - sub r7, r3
+  0414 - 07170000 - ld r1, [r7+0x0]
+  0418 - 04120000 - div r1, r2
+  041C - 08170000 - st r1, [r7+0x0]
+  0420 - 09300004 - li r3, #4
+  0424 - 01730000 - add r7, r3
+  0428 - 09300004 - li r3, #4
+  042C - 02730000 - sub r7, r3
+  0430 - 07170000 - ld r1, [r7+0x0]
+  0434 - 08102024 - st r1, [r0+0x2024]
+  0438 - 0710202C - ld r1, [r0+0x202C]
+  043C - 08170000 - st r1, [r7+0x0]
+  0440 - 09300004 - li r3, #4
+  0444 - 01730000 - add r7, r3
+  0448 - 07102000 - ld r1, [r0+0x2000]
+  044C - 08170000 - st r1, [r7+0x0]
+  0450 - 09300004 - li r3, #4
+  0454 - 01730000 - add r7, r3
+  0458 - 09300004 - li r3, #4
+  045C - 02730000 - sub r7, r3
+  0460 - 07270000 - ld r2, [r7+0x0]
+  0464 - 09300004 - li r3, #4
+  0468 - 02730000 - sub r7, r3
+  046C - 07170000 - ld r1, [r7+0x0]
+  0470 - 05120000 - mod r1, r2
+  0474 - 08170000 - st r1, [r7+0x0]
+  0478 - 09300004 - li r3, #4
+  047C - 01730000 - add r7, r3
+  0480 - 09300004 - li r3, #4
+  0484 - 02730000 - sub r7, r3
+  0488 - 07170000 - ld r1, [r7+0x0]
+  048C - 0810202C - st r1, [r0+0x202C]
+  0490 - 0710200C - ld r1, [r0+0x200C]
+  0494 - 08170000 - st r1, [r7+0x0]
+  0498 - 09300004 - li r3, #4
+  049C - 01730000 - add r7, r3
+  04A0 - 0710201C - ld r1, [r0+0x201C]
+  04A4 - 08170000 - st r1, [r7+0x0]
+  04A8 - 09300004 - li r3, #4
+  04AC - 01730000 - add r7, r3
+  04B0 - 09300004 - li r3, #4
+  04B4 - 02730000 - sub r7, r3
+  04B8 - 07270000 - ld r2, [r7+0x0]
+  04BC - 09300004 - li r3, #4
+  04C0 - 02730000 - sub r7, r3
+  04C4 - 07170000 - ld r1, [r7+0x0]
+  04C8 - 01120000 - add r1, r2
+  04CC - 08170000 - st r1, [r7+0x0]
+  04D0 - 09300004 - li r3, #4
+  04D4 - 01730000 - add r7, r3
+  04D8 - 07102024 - ld r1, [r0+0x2024]
+  04DC - 08170000 - st r1, [r7+0x0]
+  04E0 - 09300004 - li r3, #4
+  04E4 - 01730000 - add r7, r3
+  04E8 - 09300004 - li r3, #4
+  04EC - 02730000 - sub r7, r3
+  04F0 - 07270000 - ld r2, [r7+0x0]
+  04F4 - 09300004 - li r3, #4
+  04F8 - 02730000 - sub r7, r3
+  04FC - 07170000 - ld r1, [r7+0x0]
+  0500 - 01120000 - add r1, r2
+  0504 - 08170000 - st r1, [r7+0x0]
+  0508 - 09300004 - li r3, #4
+  050C - 01730000 - add r7, r3
+  0510 - 09300004 - li r3, #4
+  0514 - 02730000 - sub r7, r3
+  0518 - 07170000 - ld r1, [r7+0x0]
+  051C - 08102030 - st r1, [r0+0x2030]
+  0520 - 07102030 - ld r1, [r0+0x2030]
+  0524 - 08170000 - st r1, [r7+0x0]
+  0528 - 09300004 - li r3, #4
+  052C - 01730000 - add r7, r3
+  0530 - 07102000 - ld r1, [r0+0x2000]
+  0534 - 08170000 - st r1, [r7+0x0]
+  0538 - 09300004 - li r3, #4
+  053C - 01730000 - add r7, r3
+  0540 - 09300004 - li r3, #4
+  0544 - 02730000 - sub r7, r3
+  0548 - 07270000 - ld r2, [r7+0x0]
+  054C - 09300004 - li r3, #4
+  0550 - 02730000 - sub r7, r3
+  0554 - 07170000 - ld r1, [r7+0x0]
+  0558 - 04120000 - div r1, r2
+  055C - 08170000 - st r1, [r7+0x0]
+  0560 - 09300004 - li r3, #4
+  0564 - 01730000 - add r7, r3
+  0568 - 09300004 - li r3, #4
+  056C - 02730000 - sub r7, r3
+  0570 - 07170000 - ld r1, [r7+0x0]
+  0574 - 08102024 - st r1, [r0+0x2024]
+  0578 - 07102030 - ld r1, [r0+0x2030]
+  057C - 08170000 - st r1, [r7+0x0]
+  0580 - 09300004 - li r3, #4
+  0584 - 01730000 - add r7, r3
+  0588 - 07102000 - ld r1, [r0+0x2000]
+  058C - 08170000 - st r1, [r7+0x0]
+  0590 - 09300004 - li r3, #4
+  0594 - 01730000 - add r7, r3
+  0598 - 09300004 - li r3, #4
+  059C - 02730000 - sub r7, r3
+  05A0 - 07270000 - ld r2, [r7+0x0]
+  05A4 - 09300004 - li r3, #4
+  05A8 - 02730000 - sub r7, r3
+  05AC - 07170000 - ld r1, [r7+0x0]
+  05B0 - 05120000 - mod r1, r2
+  05B4 - 08170000 - st r1, [r7+0x0]
+  05B8 - 09300004 - li r3, #4
+  05BC - 01730000 - add r7, r3
+  05C0 - 09300004 - li r3, #4
+  05C4 - 02730000 - sub r7, r3
+  05C8 - 07170000 - ld r1, [r7+0x0]
+  05CC - 08102030 - st r1, [r0+0x2030]
+  05D0 - 07102010 - ld r1, [r0+0x2010]
+  05D4 - 08170000 - st r1, [r7+0x0]
+  05D8 - 09300004 - li r3, #4
+  05DC - 01730000 - add r7, r3
+  05E0 - 07102020 - ld r1, [r0+0x2020]
+  05E4 - 08170000 - st r1, [r7+0x0]
+  05E8 - 09300004 - li r3, #4
+  05EC - 01730000 - add r7, r3
+  05F0 - 09300004 - li r3, #4
+  05F4 - 02730000 - sub r7, r3
+  05F8 - 07270000 - ld r2, [r7+0x0]
+  05FC - 09300004 - li r3, #4
+  0600 - 02730000 - sub r7, r3
+  0604 - 07170000 - ld r1, [r7+0x0]
+  0608 - 01120000 - add r1, r2
+  060C - 08170000 - st r1, [r7+0x0]
+  0610 - 09300004 - li r3, #4
+  0614 - 01730000 - add r7, r3
+  0618 - 07102024 - ld r1, [r0+0x2024]
+  061C - 08170000 - st r1, [r7+0x0]
+  0620 - 09300004 - li r3, #4
+  0624 - 01730000 - add r7, r3
+  0628 - 09300004 - li r3, #4
+  062C - 02730000 - sub r7, r3
+  0630 - 07270000 - ld r2, [r7+0x0]
+  0634 - 09300004 - li r3, #4
+  0638 - 02730000 - sub r7, r3
+  063C - 07170000 - ld r1, [r7+0x0]
+  0640 - 01120000 - add r1, r2
+  0644 - 08170000 - st r1, [r7+0x0]
+  0648 - 09300004 - li r3, #4
+  064C - 01730000 - add r7, r3
+  0650 - 09300004 - li r3, #4
+  0654 - 02730000 - sub r7, r3
+  0658 - 07170000 - ld r1, [r7+0x0]
+  065C - 08102034 - st r1, [r0+0x2034]
+  0660 - 07102034 - ld r1, [r0+0x2034]
+  0664 - 08170000 - st r1, [r7+0x0]
+  0668 - 09300004 - li r3, #4
+  066C - 01730000 - add r7, r3
+  0670 - 07102000 - ld r1, [r0+0x2000]
+  0674 - 08170000 - st r1, [r7+0x0]
+  0678 - 09300004 - li r3, #4
+  067C - 01730000 - add r7, r3
+  0680 - 09300004 - li r3, #4
+  0684 - 02730000 - sub r7, r3
+  0688 - 07270000 - ld r2, [r7+0x0]
+  068C - 09300004 - li r3, #4
+  0690 - 02730000 - sub r7, r3
+  0694 - 07170000 - ld r1, [r7+0x0]
+  0698 - 05120000 - mod r1, r2
+  069C - 08170000 - st r1, [r7+0x0]
+  06A0 - 09300004 - li r3, #4
+  06A4 - 01730000 - add r7, r3
+  06A8 - 09300004 - li r3, #4
+  06AC - 02730000 - sub r7, r3
+  06B0 - 07170000 - ld r1, [r7+0x0]
+  06B4 - 08102034 - st r1, [r0+0x2034]
+  06B8 - 09400000 - li r4, #0
+  06BC - 07502400 - ld r5, [r0+0x2400]
+  06C0 - 09200004 - li r2, #4
+  06C4 - 03520000 - mul r5, r2
+  06C8 - 06450000 - cmp r4, r5
+  06CC - 100006E4 - jge 0x06E4
+  06D0 - 07342404 - ld r3, [r4+0x2404]
+  06D4 - 12030001 - out r3, port#1
+  06D8 - 09200004 - li r2, #4
+  06DC - 01420000 - add r4, r2
+  06E0 - 0A0006C8 - jmp 0x06C8
+  06E4 - 07102034 - ld r1, [r0+0x2034]
+  06E8 - 08170000 - st r1, [r7+0x0]
+  06EC - 09300004 - li r3, #4
+  06F0 - 01730000 - add r7, r3
+  06F4 - 09300004 - li r3, #4
+  06F8 - 02730000 - sub r7, r3
+  06FC - 07170000 - ld r1, [r7+0x0]
+  0700 - 09200000 - li r2, #0
+  0704 - 06120000 - cmp r1, r2
+  0708 - 10000724 - jge 0x0724
+  070C - 0920002D - li r2, #45
+  0710 - 12020001 - out r2, port#1
+  0714 - 09200000 - li r2, #0
+  0718 - 02210000 - sub r2, r1
+  071C - 09100000 - li r1, #0
+  0720 - 01120000 - add r1, r2
+  0724 - 09200000 - li r2, #0
+  0728 - 06120000 - cmp r1, r2
+  072C - 0C00073C - jnz 0x073C
+  0730 - 09200030 - li r2, #48
+  0734 - 12020001 - out r2, port#1
+  0738 - 0A00079C - jmp 0x079C
+  073C - 09400000 - li r4, #0
+  0740 - 09200000 - li r2, #0
+  0744 - 06120000 - cmp r1, r2
+  0748 - 0B00077C - jz 0x077C
+  074C - 09300000 - li r3, #0
+  0750 - 01310000 - add r3, r1
+  0754 - 0920000A - li r2, #10
+  0758 - 05320000 - mod r3, r2
+  075C - 09200030 - li r2, #48
+  0760 - 01320000 - add r3, r2
+  0764 - 08342300 - st r3, [r4+0x2300]
+  0768 - 09200004 - li r2, #4
+  076C - 01420000 - add r4, r2
+  0770 - 0920000A - li r2, #10
+  0774 - 04120000 - div r1, r2
+  0778 - 0A000740 - jmp 0x0740
+  077C - 09200000 - li r2, #0
+  0780 - 06420000 - cmp r4, r2
+  0784 - 0B00079C - jz 0x079C
+  0788 - 09200004 - li r2, #4
+  078C - 02420000 - sub r4, r2
+  0790 - 07342300 - ld r3, [r4+0x2300]
+  0794 - 12030001 - out r3, port#1
+  0798 - 0A00077C - jmp 0x077C
+  079C - 09100020 - li r1, #32
+  07A0 - 08170000 - st r1, [r7+0x0]
+  07A4 - 09300004 - li r3, #4
+  07A8 - 01730000 - add r7, r3
+  07AC - 09300004 - li r3, #4
+  07B0 - 02730000 - sub r7, r3
+  07B4 - 07170000 - ld r1, [r7+0x0]
+  07B8 - 12010001 - out r1, port#1
+  07BC - 07102030 - ld r1, [r0+0x2030]
+  07C0 - 08170000 - st r1, [r7+0x0]
+  07C4 - 09300004 - li r3, #4
+  07C8 - 01730000 - add r7, r3
+  07CC - 09300004 - li r3, #4
+  07D0 - 02730000 - sub r7, r3
+  07D4 - 07170000 - ld r1, [r7+0x0]
+  07D8 - 09200000 - li r2, #0
+  07DC - 06120000 - cmp r1, r2
+  07E0 - 100007FC - jge 0x07FC
+  07E4 - 0920002D - li r2, #45
+  07E8 - 12020001 - out r2, port#1
+  07EC - 09200000 - li r2, #0
+  07F0 - 02210000 - sub r2, r1
+  07F4 - 09100000 - li r1, #0
+  07F8 - 01120000 - add r1, r2
+  07FC - 09200000 - li r2, #0
+  0800 - 06120000 - cmp r1, r2
+  0804 - 0C000814 - jnz 0x0814
+  0808 - 09200030 - li r2, #48
+  080C - 12020001 - out r2, port#1
+  0810 - 0A000874 - jmp 0x0874
+  0814 - 09400000 - li r4, #0
+  0818 - 09200000 - li r2, #0
+  081C - 06120000 - cmp r1, r2
+  0820 - 0B000854 - jz 0x0854
+  0824 - 09300000 - li r3, #0
+  0828 - 01310000 - add r3, r1
+  082C - 0920000A - li r2, #10
+  0830 - 05320000 - mod r3, r2
+  0834 - 09200030 - li r2, #48
+  0838 - 01320000 - add r3, r2
+  083C - 08342300 - st r3, [r4+0x2300]
+  0840 - 09200004 - li r2, #4
+  0844 - 01420000 - add r4, r2
+  0848 - 0920000A - li r2, #10
+  084C - 04120000 - div r1, r2
+  0850 - 0A000818 - jmp 0x0818
+  0854 - 09200000 - li r2, #0
+  0858 - 06420000 - cmp r4, r2
+  085C - 0B000874 - jz 0x0874
+  0860 - 09200004 - li r2, #4
+  0864 - 02420000 - sub r4, r2
+  0868 - 07342300 - ld r3, [r4+0x2300]
+  086C - 12030001 - out r3, port#1
+  0870 - 0A000854 - jmp 0x0854
+  0874 - 09100020 - li r1, #32
+  0878 - 08170000 - st r1, [r7+0x0]
+  087C - 09300004 - li r3, #4
+  0880 - 01730000 - add r7, r3
+  0884 - 09300004 - li r3, #4
+  0888 - 02730000 - sub r7, r3
+  088C - 07170000 - ld r1, [r7+0x0]
+  0890 - 12010001 - out r1, port#1
+  0894 - 0710202C - ld r1, [r0+0x202C]
+  0898 - 08170000 - st r1, [r7+0x0]
+  089C - 09300004 - li r3, #4
+  08A0 - 01730000 - add r7, r3
+  08A4 - 09300004 - li r3, #4
+  08A8 - 02730000 - sub r7, r3
+  08AC - 07170000 - ld r1, [r7+0x0]
+  08B0 - 09200000 - li r2, #0
+  08B4 - 06120000 - cmp r1, r2
+  08B8 - 100008D4 - jge 0x08D4
+  08BC - 0920002D - li r2, #45
+  08C0 - 12020001 - out r2, port#1
+  08C4 - 09200000 - li r2, #0
+  08C8 - 02210000 - sub r2, r1
+  08CC - 09100000 - li r1, #0
+  08D0 - 01120000 - add r1, r2
+  08D4 - 09200000 - li r2, #0
+  08D8 - 06120000 - cmp r1, r2
+  08DC - 0C0008EC - jnz 0x08EC
+  08E0 - 09200030 - li r2, #48
+  08E4 - 12020001 - out r2, port#1
+  08E8 - 0A00094C - jmp 0x094C
+  08EC - 09400000 - li r4, #0
+  08F0 - 09200000 - li r2, #0
+  08F4 - 06120000 - cmp r1, r2
+  08F8 - 0B00092C - jz 0x092C
+  08FC - 09300000 - li r3, #0
+  0900 - 01310000 - add r3, r1
+  0904 - 0920000A - li r2, #10
+  0908 - 05320000 - mod r3, r2
+  090C - 09200030 - li r2, #48
+  0910 - 01320000 - add r3, r2
+  0914 - 08342300 - st r3, [r4+0x2300]
+  0918 - 09200004 - li r2, #4
+  091C - 01420000 - add r4, r2
+  0920 - 0920000A - li r2, #10
+  0924 - 04120000 - div r1, r2
+  0928 - 0A0008F0 - jmp 0x08F0
+  092C - 09200000 - li r2, #0
+  0930 - 06420000 - cmp r4, r2
+  0934 - 0B00094C - jz 0x094C
+  0938 - 09200004 - li r2, #4
+  093C - 02420000 - sub r4, r2
+  0940 - 07342300 - ld r3, [r4+0x2300]
+  0944 - 12030001 - out r3, port#1
+  0948 - 0A00092C - jmp 0x092C
+  094C - 09100020 - li r1, #32
+  0950 - 08170000 - st r1, [r7+0x0]
+  0954 - 09300004 - li r3, #4
+  0958 - 01730000 - add r7, r3
+  095C - 09300004 - li r3, #4
+  0960 - 02730000 - sub r7, r3
+  0964 - 07170000 - ld r1, [r7+0x0]
+  0968 - 12010001 - out r1, port#1
+  096C - 07102028 - ld r1, [r0+0x2028]
+  0970 - 08170000 - st r1, [r7+0x0]
+  0974 - 09300004 - li r3, #4
+  0978 - 01730000 - add r7, r3
+  097C - 09300004 - li r3, #4
+  0980 - 02730000 - sub r7, r3
+  0984 - 07170000 - ld r1, [r7+0x0]
+  0988 - 09200000 - li r2, #0
+  098C - 06120000 - cmp r1, r2
+  0990 - 100009AC - jge 0x09AC
+  0994 - 0920002D - li r2, #45
+  0998 - 12020001 - out r2, port#1
+  099C - 09200000 - li r2, #0
+  09A0 - 02210000 - sub r2, r1
+  09A4 - 09100000 - li r1, #0
+  09A8 - 01120000 - add r1, r2
+  09AC - 09200000 - li r2, #0
+  09B0 - 06120000 - cmp r1, r2
+  09B4 - 0C0009C4 - jnz 0x09C4
+  09B8 - 09200030 - li r2, #48
+  09BC - 12020001 - out r2, port#1
+  09C0 - 0A000A24 - jmp 0x0A24
+  09C4 - 09400000 - li r4, #0
+  09C8 - 09200000 - li r2, #0
+  09CC - 06120000 - cmp r1, r2
+  09D0 - 0B000A04 - jz 0x0A04
+  09D4 - 09300000 - li r3, #0
+  09D8 - 01310000 - add r3, r1
+  09DC - 0920000A - li r2, #10
+  09E0 - 05320000 - mod r3, r2
+  09E4 - 09200030 - li r2, #48
+  09E8 - 01320000 - add r3, r2
+  09EC - 08342300 - st r3, [r4+0x2300]
+  09F0 - 09200004 - li r2, #4
+  09F4 - 01420000 - add r4, r2
+  09F8 - 0920000A - li r2, #10
+  09FC - 04120000 - div r1, r2
+  0A00 - 0A0009C8 - jmp 0x09C8
+  0A04 - 09200000 - li r2, #0
+  0A08 - 06420000 - cmp r4, r2
+  0A0C - 0B000A24 - jz 0x0A24
+  0A10 - 09200004 - li r2, #4
+  0A14 - 02420000 - sub r4, r2
+  0A18 - 07342300 - ld r3, [r4+0x2300]
+  0A1C - 12030001 - out r3, port#1
+  0A20 - 0A000A04 - jmp 0x0A04
+  0A24 - 0910000A - li r1, #10
+  0A28 - 08170000 - st r1, [r7+0x0]
+  0A2C - 09300004 - li r3, #4
+  0A30 - 01730000 - add r7, r3
+  0A34 - 09300004 - li r3, #4
+  0A38 - 02730000 - sub r7, r3
+  0A3C - 07170000 - ld r1, [r7+0x0]
+  0A40 - 12010001 - out r1, port#1
+  0A44 - 09100003 - li r1, #3
+  0A48 - 08170000 - st r1, [r7+0x0]
+  0A4C - 09300004 - li r3, #4
+  0A50 - 01730000 - add r7, r3
+  0A54 - 09300004 - li r3, #4
+  0A58 - 02730000 - sub r7, r3
+  0A5C - 07170000 - ld r1, [r7+0x0]
+  0A60 - 08102038 - st r1, [r0+0x2038]
+  0A64 - 09100000 - li r1, #0
+  0A68 - 08170000 - st r1, [r7+0x0]
+  0A6C - 09300004 - li r3, #4
+  0A70 - 01730000 - add r7, r3
+  0A74 - 09300004 - li r3, #4
+  0A78 - 02730000 - sub r7, r3
+  0A7C - 07170000 - ld r1, [r7+0x0]
+  0A80 - 08102024 - st r1, [r0+0x2024]
+  0A84 - 07102004 - ld r1, [r0+0x2004]
+  0A88 - 08170000 - st r1, [r7+0x0]
+  0A8C - 09300004 - li r3, #4
+  0A90 - 01730000 - add r7, r3
+  0A94 - 07102038 - ld r1, [r0+0x2038]
+  0A98 - 08170000 - st r1, [r7+0x0]
+  0A9C - 09300004 - li r3, #4
+  0AA0 - 01730000 - add r7, r3
+  0AA4 - 09300004 - li r3, #4
+  0AA8 - 02730000 - sub r7, r3
+  0AAC - 07270000 - ld r2, [r7+0x0]
+  0AB0 - 09300004 - li r3, #4
+  0AB4 - 02730000 - sub r7, r3
+  0AB8 - 07170000 - ld r1, [r7+0x0]
+  0ABC - 03120000 - mul r1, r2
+  0AC0 - 08170000 - st r1, [r7+0x0]
+  0AC4 - 09300004 - li r3, #4
+  0AC8 - 01730000 - add r7, r3
+  0ACC - 07102024 - ld r1, [r0+0x2024]
+  0AD0 - 08170000 - st r1, [r7+0x0]
+  0AD4 - 09300004 - li r3, #4
+  0AD8 - 01730000 - add r7, r3
+  0ADC - 09300004 - li r3, #4
+  0AE0 - 02730000 - sub r7, r3
+  0AE4 - 07270000 - ld r2, [r7+0x0]
+  0AE8 - 09300004 - li r3, #4
+  0AEC - 02730000 - sub r7, r3
+  0AF0 - 07170000 - ld r1, [r7+0x0]
+  0AF4 - 01120000 - add r1, r2
+  0AF8 - 08170000 - st r1, [r7+0x0]
+  0AFC - 09300004 - li r3, #4
+  0B00 - 01730000 - add r7, r3
+  0B04 - 09300004 - li r3, #4
+  0B08 - 02730000 - sub r7, r3
+  0B0C - 07170000 - ld r1, [r7+0x0]
+  0B10 - 0810203C - st r1, [r0+0x203C]
+  0B14 - 0710203C - ld r1, [r0+0x203C]
+  0B18 - 08170000 - st r1, [r7+0x0]
+  0B1C - 09300004 - li r3, #4
+  0B20 - 01730000 - add r7, r3
+  0B24 - 07102000 - ld r1, [r0+0x2000]
+  0B28 - 08170000 - st r1, [r7+0x0]
+  0B2C - 09300004 - li r3, #4
+  0B30 - 01730000 - add r7, r3
+  0B34 - 09300004 - li r3, #4
+  0B38 - 02730000 - sub r7, r3
+  0B3C - 07270000 - ld r2, [r7+0x0]
+  0B40 - 09300004 - li r3, #4
+  0B44 - 02730000 - sub r7, r3
+  0B48 - 07170000 - ld r1, [r7+0x0]
+  0B4C - 04120000 - div r1, r2
+  0B50 - 08170000 - st r1, [r7+0x0]
+  0B54 - 09300004 - li r3, #4
+  0B58 - 01730000 - add r7, r3
+  0B5C - 09300004 - li r3, #4
+  0B60 - 02730000 - sub r7, r3
+  0B64 - 07170000 - ld r1, [r7+0x0]
+  0B68 - 08102024 - st r1, [r0+0x2024]
+  0B6C - 0710203C - ld r1, [r0+0x203C]
+  0B70 - 08170000 - st r1, [r7+0x0]
+  0B74 - 09300004 - li r3, #4
+  0B78 - 01730000 - add r7, r3
+  0B7C - 07102000 - ld r1, [r0+0x2000]
+  0B80 - 08170000 - st r1, [r7+0x0]
+  0B84 - 09300004 - li r3, #4
+  0B88 - 01730000 - add r7, r3
+  0B8C - 09300004 - li r3, #4
+  0B90 - 02730000 - sub r7, r3
+  0B94 - 07270000 - ld r2, [r7+0x0]
+  0B98 - 09300004 - li r3, #4
+  0B9C - 02730000 - sub r7, r3
+  0BA0 - 07170000 - ld r1, [r7+0x0]
+  0BA4 - 05120000 - mod r1, r2
+  0BA8 - 08170000 - st r1, [r7+0x0]
+  0BAC - 09300004 - li r3, #4
+  0BB0 - 01730000 - add r7, r3
+  0BB4 - 09300004 - li r3, #4
+  0BB8 - 02730000 - sub r7, r3
+  0BBC - 07170000 - ld r1, [r7+0x0]
+  0BC0 - 0810203C - st r1, [r0+0x203C]
+  0BC4 - 07102008 - ld r1, [r0+0x2008]
+  0BC8 - 08170000 - st r1, [r7+0x0]
+  0BCC - 09300004 - li r3, #4
+  0BD0 - 01730000 - add r7, r3
+  0BD4 - 07102038 - ld r1, [r0+0x2038]
+  0BD8 - 08170000 - st r1, [r7+0x0]
+  0BDC - 09300004 - li r3, #4
+  0BE0 - 01730000 - add r7, r3
+  0BE4 - 09300004 - li r3, #4
+  0BE8 - 02730000 - sub r7, r3
+  0BEC - 07270000 - ld r2, [r7+0x0]
+  0BF0 - 09300004 - li r3, #4
+  0BF4 - 02730000 - sub r7, r3
+  0BF8 - 07170000 - ld r1, [r7+0x0]
+  0BFC - 03120000 - mul r1, r2
+  0C00 - 08170000 - st r1, [r7+0x0]
+  0C04 - 09300004 - li r3, #4
+  0C08 - 01730000 - add r7, r3
+  0C0C - 07102024 - ld r1, [r0+0x2024]
+  0C10 - 08170000 - st r1, [r7+0x0]
+  0C14 - 09300004 - li r3, #4
+  0C18 - 01730000 - add r7, r3
+  0C1C - 09300004 - li r3, #4
+  0C20 - 02730000 - sub r7, r3
+  0C24 - 07270000 - ld r2, [r7+0x0]
+  0C28 - 09300004 - li r3, #4
+  0C2C - 02730000 - sub r7, r3
+  0C30 - 07170000 - ld r1, [r7+0x0]
+  0C34 - 01120000 - add r1, r2
+  0C38 - 08170000 - st r1, [r7+0x0]
+  0C3C - 09300004 - li r3, #4
+  0C40 - 01730000 - add r7, r3
+  0C44 - 09300004 - li r3, #4
+  0C48 - 02730000 - sub r7, r3
+  0C4C - 07170000 - ld r1, [r7+0x0]
+  0C50 - 08102040 - st r1, [r0+0x2040]
+  0C54 - 07102040 - ld r1, [r0+0x2040]
+  0C58 - 08170000 - st r1, [r7+0x0]
+  0C5C - 09300004 - li r3, #4
+  0C60 - 01730000 - add r7, r3
+  0C64 - 07102000 - ld r1, [r0+0x2000]
+  0C68 - 08170000 - st r1, [r7+0x0]
+  0C6C - 09300004 - li r3, #4
+  0C70 - 01730000 - add r7, r3
+  0C74 - 09300004 - li r3, #4
+  0C78 - 02730000 - sub r7, r3
+  0C7C - 07270000 - ld r2, [r7+0x0]
+  0C80 - 09300004 - li r3, #4
+  0C84 - 02730000 - sub r7, r3
+  0C88 - 07170000 - ld r1, [r7+0x0]
+  0C8C - 04120000 - div r1, r2
+  0C90 - 08170000 - st r1, [r7+0x0]
+  0C94 - 09300004 - li r3, #4
+  0C98 - 01730000 - add r7, r3
+  0C9C - 09300004 - li r3, #4
+  0CA0 - 02730000 - sub r7, r3
+  0CA4 - 07170000 - ld r1, [r7+0x0]
+  0CA8 - 08102024 - st r1, [r0+0x2024]
+  0CAC - 07102040 - ld r1, [r0+0x2040]
+  0CB0 - 08170000 - st r1, [r7+0x0]
+  0CB4 - 09300004 - li r3, #4
+  0CB8 - 01730000 - add r7, r3
+  0CBC - 07102000 - ld r1, [r0+0x2000]
+  0CC0 - 08170000 - st r1, [r7+0x0]
+  0CC4 - 09300004 - li r3, #4
+  0CC8 - 01730000 - add r7, r3
+  0CCC - 09300004 - li r3, #4
+  0CD0 - 02730000 - sub r7, r3
+  0CD4 - 07270000 - ld r2, [r7+0x0]
+  0CD8 - 09300004 - li r3, #4
+  0CDC - 02730000 - sub r7, r3
+  0CE0 - 07170000 - ld r1, [r7+0x0]
+  0CE4 - 05120000 - mod r1, r2
+  0CE8 - 08170000 - st r1, [r7+0x0]
+  0CEC - 09300004 - li r3, #4
+  0CF0 - 01730000 - add r7, r3
+  0CF4 - 09300004 - li r3, #4
+  0CF8 - 02730000 - sub r7, r3
+  0CFC - 07170000 - ld r1, [r7+0x0]
+  0D00 - 08102040 - st r1, [r0+0x2040]
+  0D04 - 0710200C - ld r1, [r0+0x200C]
+  0D08 - 08170000 - st r1, [r7+0x0]
+  0D0C - 09300004 - li r3, #4
+  0D10 - 01730000 - add r7, r3
+  0D14 - 07102038 - ld r1, [r0+0x2038]
+  0D18 - 08170000 - st r1, [r7+0x0]
+  0D1C - 09300004 - li r3, #4
+  0D20 - 01730000 - add r7, r3
+  0D24 - 09300004 - li r3, #4
+  0D28 - 02730000 - sub r7, r3
+  0D2C - 07270000 - ld r2, [r7+0x0]
+  0D30 - 09300004 - li r3, #4
+  0D34 - 02730000 - sub r7, r3
+  0D38 - 07170000 - ld r1, [r7+0x0]
+  0D3C - 03120000 - mul r1, r2
+  0D40 - 08170000 - st r1, [r7+0x0]
+  0D44 - 09300004 - li r3, #4
+  0D48 - 01730000 - add r7, r3
+  0D4C - 07102024 - ld r1, [r0+0x2024]
+  0D50 - 08170000 - st r1, [r7+0x0]
+  0D54 - 09300004 - li r3, #4
+  0D58 - 01730000 - add r7, r3
+  0D5C - 09300004 - li r3, #4
+  0D60 - 02730000 - sub r7, r3
+  0D64 - 07270000 - ld r2, [r7+0x0]
+  0D68 - 09300004 - li r3, #4
+  0D6C - 02730000 - sub r7, r3
+  0D70 - 07170000 - ld r1, [r7+0x0]
+  0D74 - 01120000 - add r1, r2
+  0D78 - 08170000 - st r1, [r7+0x0]
+  0D7C - 09300004 - li r3, #4
+  0D80 - 01730000 - add r7, r3
+  0D84 - 09300004 - li r3, #4
+  0D88 - 02730000 - sub r7, r3
+  0D8C - 07170000 - ld r1, [r7+0x0]
+  0D90 - 08102044 - st r1, [r0+0x2044]
+  0D94 - 07102044 - ld r1, [r0+0x2044]
+  0D98 - 08170000 - st r1, [r7+0x0]
+  0D9C - 09300004 - li r3, #4
+  0DA0 - 01730000 - add r7, r3
+  0DA4 - 07102000 - ld r1, [r0+0x2000]
+  0DA8 - 08170000 - st r1, [r7+0x0]
+  0DAC - 09300004 - li r3, #4
+  0DB0 - 01730000 - add r7, r3
+  0DB4 - 09300004 - li r3, #4
+  0DB8 - 02730000 - sub r7, r3
+  0DBC - 07270000 - ld r2, [r7+0x0]
+  0DC0 - 09300004 - li r3, #4
+  0DC4 - 02730000 - sub r7, r3
+  0DC8 - 07170000 - ld r1, [r7+0x0]
+  0DCC - 04120000 - div r1, r2
+  0DD0 - 08170000 - st r1, [r7+0x0]
+  0DD4 - 09300004 - li r3, #4
+  0DD8 - 01730000 - add r7, r3
+  0DDC - 09300004 - li r3, #4
+  0DE0 - 02730000 - sub r7, r3
+  0DE4 - 07170000 - ld r1, [r7+0x0]
+  0DE8 - 08102024 - st r1, [r0+0x2024]
+  0DEC - 07102044 - ld r1, [r0+0x2044]
+  0DF0 - 08170000 - st r1, [r7+0x0]
+  0DF4 - 09300004 - li r3, #4
+  0DF8 - 01730000 - add r7, r3
+  0DFC - 07102000 - ld r1, [r0+0x2000]
+  0E00 - 08170000 - st r1, [r7+0x0]
+  0E04 - 09300004 - li r3, #4
+  0E08 - 01730000 - add r7, r3
+  0E0C - 09300004 - li r3, #4
+  0E10 - 02730000 - sub r7, r3
+  0E14 - 07270000 - ld r2, [r7+0x0]
+  0E18 - 09300004 - li r3, #4
+  0E1C - 02730000 - sub r7, r3
+  0E20 - 07170000 - ld r1, [r7+0x0]
+  0E24 - 05120000 - mod r1, r2
+  0E28 - 08170000 - st r1, [r7+0x0]
+  0E2C - 09300004 - li r3, #4
+  0E30 - 01730000 - add r7, r3
+  0E34 - 09300004 - li r3, #4
+  0E38 - 02730000 - sub r7, r3
+  0E3C - 07170000 - ld r1, [r7+0x0]
+  0E40 - 08102044 - st r1, [r0+0x2044]
+  0E44 - 07102010 - ld r1, [r0+0x2010]
+  0E48 - 08170000 - st r1, [r7+0x0]
+  0E4C - 09300004 - li r3, #4
+  0E50 - 01730000 - add r7, r3
+  0E54 - 07102038 - ld r1, [r0+0x2038]
+  0E58 - 08170000 - st r1, [r7+0x0]
+  0E5C - 09300004 - li r3, #4
+  0E60 - 01730000 - add r7, r3
+  0E64 - 09300004 - li r3, #4
+  0E68 - 02730000 - sub r7, r3
+  0E6C - 07270000 - ld r2, [r7+0x0]
+  0E70 - 09300004 - li r3, #4
+  0E74 - 02730000 - sub r7, r3
+  0E78 - 07170000 - ld r1, [r7+0x0]
+  0E7C - 03120000 - mul r1, r2
+  0E80 - 08170000 - st r1, [r7+0x0]
+  0E84 - 09300004 - li r3, #4
+  0E88 - 01730000 - add r7, r3
+  0E8C - 07102024 - ld r1, [r0+0x2024]
+  0E90 - 08170000 - st r1, [r7+0x0]
+  0E94 - 09300004 - li r3, #4
+  0E98 - 01730000 - add r7, r3
+  0E9C - 09300004 - li r3, #4
+  0EA0 - 02730000 - sub r7, r3
+  0EA4 - 07270000 - ld r2, [r7+0x0]
+  0EA8 - 09300004 - li r3, #4
+  0EAC - 02730000 - sub r7, r3
+  0EB0 - 07170000 - ld r1, [r7+0x0]
+  0EB4 - 01120000 - add r1, r2
+  0EB8 - 08170000 - st r1, [r7+0x0]
+  0EBC - 09300004 - li r3, #4
+  0EC0 - 01730000 - add r7, r3
+  0EC4 - 09300004 - li r3, #4
+  0EC8 - 02730000 - sub r7, r3
+  0ECC - 07170000 - ld r1, [r7+0x0]
+  0ED0 - 08102048 - st r1, [r0+0x2048]
+  0ED4 - 07102048 - ld r1, [r0+0x2048]
+  0ED8 - 08170000 - st r1, [r7+0x0]
+  0EDC - 09300004 - li r3, #4
+  0EE0 - 01730000 - add r7, r3
+  0EE4 - 07102000 - ld r1, [r0+0x2000]
+  0EE8 - 08170000 - st r1, [r7+0x0]
+  0EEC - 09300004 - li r3, #4
+  0EF0 - 01730000 - add r7, r3
+  0EF4 - 09300004 - li r3, #4
+  0EF8 - 02730000 - sub r7, r3
+  0EFC - 07270000 - ld r2, [r7+0x0]
+  0F00 - 09300004 - li r3, #4
+  0F04 - 02730000 - sub r7, r3
+  0F08 - 07170000 - ld r1, [r7+0x0]
+  0F0C - 05120000 - mod r1, r2
+  0F10 - 08170000 - st r1, [r7+0x0]
+  0F14 - 09300004 - li r3, #4
+  0F18 - 01730000 - add r7, r3
+  0F1C - 09300004 - li r3, #4
+  0F20 - 02730000 - sub r7, r3
+  0F24 - 07170000 - ld r1, [r7+0x0]
+  0F28 - 08102048 - st r1, [r0+0x2048]
+  0F2C - 09400000 - li r4, #0
+  0F30 - 0750244C - ld r5, [r0+0x244C]
+  0F34 - 09200004 - li r2, #4
+  0F38 - 03520000 - mul r5, r2
+  0F3C - 06450000 - cmp r4, r5
+  0F40 - 10000F58 - jge 0x0F58
+  0F44 - 07342450 - ld r3, [r4+0x2450]
+  0F48 - 12030001 - out r3, port#1
+  0F4C - 09200004 - li r2, #4
+  0F50 - 01420000 - add r4, r2
+  0F54 - 0A000F3C - jmp 0x0F3C
+  0F58 - 07102048 - ld r1, [r0+0x2048]
+  0F5C - 08170000 - st r1, [r7+0x0]
+  0F60 - 09300004 - li r3, #4
+  0F64 - 01730000 - add r7, r3
+  0F68 - 09300004 - li r3, #4
+  0F6C - 02730000 - sub r7, r3
+  0F70 - 07170000 - ld r1, [r7+0x0]
+  0F74 - 09200000 - li r2, #0
+  0F78 - 06120000 - cmp r1, r2
+  0F7C - 10000F98 - jge 0x0F98
+  0F80 - 0920002D - li r2, #45
+  0F84 - 12020001 - out r2, port#1
+  0F88 - 09200000 - li r2, #0
+  0F8C - 02210000 - sub r2, r1
+  0F90 - 09100000 - li r1, #0
+  0F94 - 01120000 - add r1, r2
+  0F98 - 09200000 - li r2, #0
+  0F9C - 06120000 - cmp r1, r2
+  0FA0 - 0C000FB0 - jnz 0x0FB0
+  0FA4 - 09200030 - li r2, #48
+  0FA8 - 12020001 - out r2, port#1
+  0FAC - 0A001010 - jmp 0x1010
+  0FB0 - 09400000 - li r4, #0
+  0FB4 - 09200000 - li r2, #0
+  0FB8 - 06120000 - cmp r1, r2
+  0FBC - 0B000FF0 - jz 0x0FF0
+  0FC0 - 09300000 - li r3, #0
+  0FC4 - 01310000 - add r3, r1
+  0FC8 - 0920000A - li r2, #10
+  0FCC - 05320000 - mod r3, r2
+  0FD0 - 09200030 - li r2, #48
+  0FD4 - 01320000 - add r3, r2
+  0FD8 - 08342300 - st r3, [r4+0x2300]
+  0FDC - 09200004 - li r2, #4
+  0FE0 - 01420000 - add r4, r2
+  0FE4 - 0920000A - li r2, #10
+  0FE8 - 04120000 - div r1, r2
+  0FEC - 0A000FB4 - jmp 0x0FB4
+  0FF0 - 09200000 - li r2, #0
+  0FF4 - 06420000 - cmp r4, r2
+  0FF8 - 0B001010 - jz 0x1010
+  0FFC - 09200004 - li r2, #4
+  1000 - 02420000 - sub r4, r2
+  1004 - 07342300 - ld r3, [r4+0x2300]
+  1008 - 12030001 - out r3, port#1
+  100C - 0A000FF0 - jmp 0x0FF0
+  1010 - 09100020 - li r1, #32
+  1014 - 08170000 - st r1, [r7+0x0]
+  1018 - 09300004 - li r3, #4
+  101C - 01730000 - add r7, r3
+  1020 - 09300004 - li r3, #4
+  1024 - 02730000 - sub r7, r3
+  1028 - 07170000 - ld r1, [r7+0x0]
+  102C - 12010001 - out r1, port#1
+  1030 - 07102044 - ld r1, [r0+0x2044]
+  1034 - 08170000 - st r1, [r7+0x0]
+  1038 - 09300004 - li r3, #4
+  103C - 01730000 - add r7, r3
+  1040 - 09300004 - li r3, #4
+  1044 - 02730000 - sub r7, r3
+  1048 - 07170000 - ld r1, [r7+0x0]
+  104C - 09200000 - li r2, #0
+  1050 - 06120000 - cmp r1, r2
+  1054 - 10001070 - jge 0x1070
+  1058 - 0920002D - li r2, #45
+  105C - 12020001 - out r2, port#1
+  1060 - 09200000 - li r2, #0
+  1064 - 02210000 - sub r2, r1
+  1068 - 09100000 - li r1, #0
+  106C - 01120000 - add r1, r2
+  1070 - 09200000 - li r2, #0
+  1074 - 06120000 - cmp r1, r2
+  1078 - 0C001088 - jnz 0x1088
+  107C - 09200030 - li r2, #48
+  1080 - 12020001 - out r2, port#1
+  1084 - 0A0010E8 - jmp 0x10E8
+  1088 - 09400000 - li r4, #0
+  108C - 09200000 - li r2, #0
+  1090 - 06120000 - cmp r1, r2
+  1094 - 0B0010C8 - jz 0x10C8
+  1098 - 09300000 - li r3, #0
+  109C - 01310000 - add r3, r1
+  10A0 - 0920000A - li r2, #10
+  10A4 - 05320000 - mod r3, r2
+  10A8 - 09200030 - li r2, #48
+  10AC - 01320000 - add r3, r2
+  10B0 - 08342300 - st r3, [r4+0x2300]
+  10B4 - 09200004 - li r2, #4
+  10B8 - 01420000 - add r4, r2
+  10BC - 0920000A - li r2, #10
+  10C0 - 04120000 - div r1, r2
+  10C4 - 0A00108C - jmp 0x108C
+  10C8 - 09200000 - li r2, #0
+  10CC - 06420000 - cmp r4, r2
+  10D0 - 0B0010E8 - jz 0x10E8
+  10D4 - 09200004 - li r2, #4
+  10D8 - 02420000 - sub r4, r2
+  10DC - 07342300 - ld r3, [r4+0x2300]
+  10E0 - 12030001 - out r3, port#1
+  10E4 - 0A0010C8 - jmp 0x10C8
+  10E8 - 09100020 - li r1, #32
+  10EC - 08170000 - st r1, [r7+0x0]
+  10F0 - 09300004 - li r3, #4
+  10F4 - 01730000 - add r7, r3
+  10F8 - 09300004 - li r3, #4
+  10FC - 02730000 - sub r7, r3
+  1100 - 07170000 - ld r1, [r7+0x0]
+  1104 - 12010001 - out r1, port#1
+  1108 - 07102040 - ld r1, [r0+0x2040]
+  110C - 08170000 - st r1, [r7+0x0]
+  1110 - 09300004 - li r3, #4
+  1114 - 01730000 - add r7, r3
+  1118 - 09300004 - li r3, #4
+  111C - 02730000 - sub r7, r3
+  1120 - 07170000 - ld r1, [r7+0x0]
+  1124 - 09200000 - li r2, #0
+  1128 - 06120000 - cmp r1, r2
+  112C - 10001148 - jge 0x1148
+  1130 - 0920002D - li r2, #45
+  1134 - 12020001 - out r2, port#1
+  1138 - 09200000 - li r2, #0
+  113C - 02210000 - sub r2, r1
+  1140 - 09100000 - li r1, #0
+  1144 - 01120000 - add r1, r2
+  1148 - 09200000 - li r2, #0
+  114C - 06120000 - cmp r1, r2
+  1150 - 0C001160 - jnz 0x1160
+  1154 - 09200030 - li r2, #48
+  1158 - 12020001 - out r2, port#1
+  115C - 0A0011C0 - jmp 0x11C0
+  1160 - 09400000 - li r4, #0
+  1164 - 09200000 - li r2, #0
+  1168 - 06120000 - cmp r1, r2
+  116C - 0B0011A0 - jz 0x11A0
+  1170 - 09300000 - li r3, #0
+  1174 - 01310000 - add r3, r1
+  1178 - 0920000A - li r2, #10
+  117C - 05320000 - mod r3, r2
+  1180 - 09200030 - li r2, #48
+  1184 - 01320000 - add r3, r2
+  1188 - 08342300 - st r3, [r4+0x2300]
+  118C - 09200004 - li r2, #4
+  1190 - 01420000 - add r4, r2
+  1194 - 0920000A - li r2, #10
+  1198 - 04120000 - div r1, r2
+  119C - 0A001164 - jmp 0x1164
+  11A0 - 09200000 - li r2, #0
+  11A4 - 06420000 - cmp r4, r2
+  11A8 - 0B0011C0 - jz 0x11C0
+  11AC - 09200004 - li r2, #4
+  11B0 - 02420000 - sub r4, r2
+  11B4 - 07342300 - ld r3, [r4+0x2300]
+  11B8 - 12030001 - out r3, port#1
+  11BC - 0A0011A0 - jmp 0x11A0
+  11C0 - 09100020 - li r1, #32
+  11C4 - 08170000 - st r1, [r7+0x0]
+  11C8 - 09300004 - li r3, #4
+  11CC - 01730000 - add r7, r3
+  11D0 - 09300004 - li r3, #4
+  11D4 - 02730000 - sub r7, r3
+  11D8 - 07170000 - ld r1, [r7+0x0]
+  11DC - 12010001 - out r1, port#1
+  11E0 - 0710203C - ld r1, [r0+0x203C]
+  11E4 - 08170000 - st r1, [r7+0x0]
+  11E8 - 09300004 - li r3, #4
+  11EC - 01730000 - add r7, r3
+  11F0 - 09300004 - li r3, #4
+  11F4 - 02730000 - sub r7, r3
+  11F8 - 07170000 - ld r1, [r7+0x0]
+  11FC - 09200000 - li r2, #0
+  1200 - 06120000 - cmp r1, r2
+  1204 - 10001220 - jge 0x1220
+  1208 - 0920002D - li r2, #45
+  120C - 12020001 - out r2, port#1
+  1210 - 09200000 - li r2, #0
+  1214 - 02210000 - sub r2, r1
+  1218 - 09100000 - li r1, #0
+  121C - 01120000 - add r1, r2
+  1220 - 09200000 - li r2, #0
+  1224 - 06120000 - cmp r1, r2
+  1228 - 0C001238 - jnz 0x1238
+  122C - 09200030 - li r2, #48
+  1230 - 12020001 - out r2, port#1
+  1234 - 0A001298 - jmp 0x1298
+  1238 - 09400000 - li r4, #0
+  123C - 09200000 - li r2, #0
+  1240 - 06120000 - cmp r1, r2
+  1244 - 0B001278 - jz 0x1278
+  1248 - 09300000 - li r3, #0
+  124C - 01310000 - add r3, r1
+  1250 - 0920000A - li r2, #10
+  1254 - 05320000 - mod r3, r2
+  1258 - 09200030 - li r2, #48
+  125C - 01320000 - add r3, r2
+  1260 - 08342300 - st r3, [r4+0x2300]
+  1264 - 09200004 - li r2, #4
+  1268 - 01420000 - add r4, r2
+  126C - 0920000A - li r2, #10
+  1270 - 04120000 - div r1, r2
+  1274 - 0A00123C - jmp 0x123C
+  1278 - 09200000 - li r2, #0
+  127C - 06420000 - cmp r4, r2
+  1280 - 0B001298 - jz 0x1298
+  1284 - 09200004 - li r2, #4
+  1288 - 02420000 - sub r4, r2
+  128C - 07342300 - ld r3, [r4+0x2300]
+  1290 - 12030001 - out r3, port#1
+  1294 - 0A001278 - jmp 0x1278
+  1298 - 13000000 - halt
+
+  == DATA ==
+  2400 - 12000000 - .word 18
+  2404 - 41000000 - .word 65  ; 'A'
+  2408 - 2B000000 - .word 43  ; '+'
+  240C - 43000000 - .word 67  ; 'C'
+  2410 - 20000000 - .word 32  ; ' '
+  2414 - 6C000000 - .word 108  ; 'l'
+  2418 - 69000000 - .word 105  ; 'i'
+  241C - 6D000000 - .word 109  ; 'm'
+  2420 - 62000000 - .word 98  ; 'b'
+  2424 - 73000000 - .word 115  ; 's'
+  2428 - 20000000 - .word 32  ; ' '
+  242C - 68000000 - .word 104  ; 'h'
+  2430 - 69000000 - .word 105  ; 'i'
+  2434 - 2E000000 - .word 46  ; '.'
+  2438 - 2E000000 - .word 46  ; '.'
+  243C - 6C000000 - .word 108  ; 'l'
+  2440 - 6F000000 - .word 111  ; 'o'
+  2444 - 3A000000 - .word 58  ; ':'
+  2448 - 20000000 - .word 32  ; ' '
+  244C - 12000000 - .word 18
+  2450 - 41000000 - .word 65  ; 'A'
+  2454 - 2A000000 - .word 42  ; '*'
+  2458 - 33000000 - .word 51  ; '3'
+  245C - 20000000 - .word 32  ; ' '
+  2460 - 6C000000 - .word 108  ; 'l'
+  2464 - 69000000 - .word 105  ; 'i'
+  2468 - 6D000000 - .word 109  ; 'm'
+  246C - 62000000 - .word 98  ; 'b'
+  2470 - 73000000 - .word 115  ; 's'
+  2474 - 20000000 - .word 32  ; ' '
+  2478 - 68000000 - .word 104  ; 'h'
+  247C - 69000000 - .word 105  ; 'i'
+  2480 - 2E000000 - .word 46  ; '.'
+  2484 - 2E000000 - .word 46  ; '.'
+  2488 - 6C000000 - .word 108  ; 'l'
+  248C - 6F000000 - .word 111  ; 'o'
+  2490 - 3A000000 - .word 58  ; ':'
+  2494 - 20000000 - .word 32  ; ' '
+out_code: !!binary |
+  CgAABAlwQAAJEAEACBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAgAAcQIAAIFwAACTAABAFzAAAJ
+  EAEACBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAAAxIAAAgXAAAJMAAEAXMAAAkw
+  AAQCcwAABxcAAAgQIAAHECAACBcAAAkwAAQBcwAACRAAAQgXAAAJMAAEAXMAAAkwAAQCcwAABycA
+  AAkwAAQCcwAABxcAAAISAAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECAEBxAgAAgXAAAJMAAE
+  AXMAAAkQAAEIFwAACTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAACEgAACBcAAAkwAAQB
+  cwAACTAABAJzAAAHFwAACBAgCAkQAAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECAMCRAAAQgX
+  AAAJMAAEAXMAAAkwAAQCcwAABxcAAAgQIBAJEAACCBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAg
+  FAkQAAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECAYCRAAAAgXAAAJMAAEAXMAAAkwAAQCcwAA
+  BxcAAAgQIBwJEAAACBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAgIAkQAAAIFwAACTAABAFzAAAJ
+  MAAEAnMAAAcXAAAIECAkBxAgBAgXAAAJMAAEAXMAAAcQIBQIFwAACTAABAFzAAAJMAAEAnMAAAcn
+  AAAJMAAEAnMAAAcXAAABEgAACBcAAAkwAAQBcwAABxAgJAgXAAAJMAAEAXMAAAkwAAQCcwAABycA
+  AAkwAAQCcwAABxcAAAESAAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECAoBxAgKAgXAAAJMAAE
+  AXMAAAcQIAAIFwAACTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAAEEgAACBcAAAkwAAQB
+  cwAACTAABAJzAAAHFwAACBAgJAcQICgIFwAACTAABAFzAAAHECAACBcAAAkwAAQBcwAACTAABAJz
+  AAAHJwAACTAABAJzAAAHFwAABRIAAAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAgQICgHECAICBcA
+  AAkwAAQBcwAABxAgGAgXAAAJMAAEAXMAAAkwAAQCcwAABycAAAkwAAQCcwAABxcAAAESAAAIFwAA
+  CTAABAFzAAAHECAkCBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAAARIAAAgXAAAJ
+  MAAEAXMAAAkwAAQCcwAABxcAAAgQICwHECAsCBcAAAkwAAQBcwAABxAgAAgXAAAJMAAEAXMAAAkw
+  AAQCcwAABycAAAkwAAQCcwAABxcAAAQSAAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECAkBxAg
+  LAgXAAAJMAAEAXMAAAcQIAAIFwAACTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAAFEgAA
+  CBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAgLAcQIAwIFwAACTAABAFzAAAHECAcCBcAAAkwAAQB
+  cwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAAARIAAAgXAAAJMAAEAXMAAAcQICQIFwAACTAABAFz
+  AAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAABEgAACBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAg
+  MAcQIDAIFwAACTAABAFzAAAHECAACBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAA
+  BBIAAAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAgQICQHECAwCBcAAAkwAAQBcwAABxAgAAgXAAAJ
+  MAAEAXMAAAkwAAQCcwAABycAAAkwAAQCcwAABxcAAAUSAAAIFwAACTAABAFzAAAJMAAEAnMAAAcX
+  AAAIECAwBxAgEAgXAAAJMAAEAXMAAAcQICAIFwAACTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMA
+  AAcXAAABEgAACBcAAAkwAAQBcwAABxAgJAgXAAAJMAAEAXMAAAkwAAQCcwAABycAAAkwAAQCcwAA
+  BxcAAAESAAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECA0BxAgNAgXAAAJMAAEAXMAAAcQIAAI
+  FwAACTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAAFEgAACBcAAAkwAAQBcwAACTAABAJz
+  AAAHFwAACBAgNAlAAAAHUCQACSAABANSAAAGRQAAEAAG5Ac0JAQSAwABCSAABAFCAAAKAAbIBxAg
+  NAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAkgAAAGEgAAEAAHJAkgAC0SAgABCSAAAAIhAAAJEAAA
+  ARIAAAkgAAAGEgAADAAHPAkgADASAgABCgAHnAlAAAAJIAAABhIAAAsAB3wJMAAAATEAAAkgAAoF
+  MgAACSAAMAEyAAAINCMACSAABAFCAAAJIAAKBBIAAAoAB0AJIAAABkIAAAsAB5wJIAAEAkIAAAc0
+  IwASAwABCgAHfAkQACAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAASAQABBxAgMAgXAAAJMAAEAXMA
+  AAkwAAQCcwAABxcAAAkgAAAGEgAAEAAH/AkgAC0SAgABCSAAAAIhAAAJEAAAARIAAAkgAAAGEgAA
+  DAAIFAkgADASAgABCgAIdAlAAAAJIAAABhIAAAsACFQJMAAAATEAAAkgAAoFMgAACSAAMAEyAAAI
+  NCMACSAABAFCAAAJIAAKBBIAAAoACBgJIAAABkIAAAsACHQJIAAEAkIAAAc0IwASAwABCgAIVAkQ
+  ACAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAASAQABBxAgLAgXAAAJMAAEAXMAAAkwAAQCcwAABxcA
+  AAkgAAAGEgAAEAAI1AkgAC0SAgABCSAAAAIhAAAJEAAAARIAAAkgAAAGEgAADAAI7AkgADASAgAB
+  CgAJTAlAAAAJIAAABhIAAAsACSwJMAAAATEAAAkgAAoFMgAACSAAMAEyAAAINCMACSAABAFCAAAJ
+  IAAKBBIAAAoACPAJIAAABkIAAAsACUwJIAAEAkIAAAc0IwASAwABCgAJLAkQACAIFwAACTAABAFz
+  AAAJMAAEAnMAAAcXAAASAQABBxAgKAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAkgAAAGEgAAEAAJ
+  rAkgAC0SAgABCSAAAAIhAAAJEAAAARIAAAkgAAAGEgAADAAJxAkgADASAgABCgAKJAlAAAAJIAAA
+  BhIAAAsACgQJMAAAATEAAAkgAAoFMgAACSAAMAEyAAAINCMACSAABAFCAAAJIAAKBBIAAAoACcgJ
+  IAAABkIAAAsACiQJIAAEAkIAAAc0IwASAwABCgAKBAkQAAoIFwAACTAABAFzAAAJMAAEAnMAAAcX
+  AAASAQABCRAAAwgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAgQIDgJEAAACBcAAAkwAAQBcwAACTAA
+  BAJzAAAHFwAACBAgJAcQIAQIFwAACTAABAFzAAAHECA4CBcAAAkwAAQBcwAACTAABAJzAAAHJwAA
+  CTAABAJzAAAHFwAAAxIAAAgXAAAJMAAEAXMAAAcQICQIFwAACTAABAFzAAAJMAAEAnMAAAcnAAAJ
+  MAAEAnMAAAcXAAABEgAACBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAgPAcQIDwIFwAACTAABAFz
+  AAAHECAACBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAABBIAAAgXAAAJMAAEAXMA
+  AAkwAAQCcwAABxcAAAgQICQHECA8CBcAAAkwAAQBcwAABxAgAAgXAAAJMAAEAXMAAAkwAAQCcwAA
+  BycAAAkwAAQCcwAABxcAAAUSAAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECA8BxAgCAgXAAAJ
+  MAAEAXMAAAcQIDgIFwAACTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAADEgAACBcAAAkw
+  AAQBcwAABxAgJAgXAAAJMAAEAXMAAAkwAAQCcwAABycAAAkwAAQCcwAABxcAAAESAAAIFwAACTAA
+  BAFzAAAJMAAEAnMAAAcXAAAIECBABxAgQAgXAAAJMAAEAXMAAAcQIAAIFwAACTAABAFzAAAJMAAE
+  AnMAAAcnAAAJMAAEAnMAAAcXAAAEEgAACBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAgJAcQIEAI
+  FwAACTAABAFzAAAHECAACBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAABRIAAAgX
+  AAAJMAAEAXMAAAkwAAQCcwAABxcAAAgQIEAHECAMCBcAAAkwAAQBcwAABxAgOAgXAAAJMAAEAXMA
+  AAkwAAQCcwAABycAAAkwAAQCcwAABxcAAAMSAAAIFwAACTAABAFzAAAHECAkCBcAAAkwAAQBcwAA
+  CTAABAJzAAAHJwAACTAABAJzAAAHFwAAARIAAAgXAAAJMAAEAXMAAAkwAAQCcwAABxcAAAgQIEQH
+  ECBECBcAAAkwAAQBcwAABxAgAAgXAAAJMAAEAXMAAAkwAAQCcwAABycAAAkwAAQCcwAABxcAAAQS
+  AAAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAIECAkBxAgRAgXAAAJMAAEAXMAAAcQIAAIFwAACTAA
+  BAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcXAAAFEgAACBcAAAkwAAQBcwAACTAABAJzAAAHFwAA
+  CBAgRAcQIBAIFwAACTAABAFzAAAHECA4CBcAAAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAH
+  FwAAAxIAAAgXAAAJMAAEAXMAAAcQICQIFwAACTAABAFzAAAJMAAEAnMAAAcnAAAJMAAEAnMAAAcX
+  AAABEgAACBcAAAkwAAQBcwAACTAABAJzAAAHFwAACBAgSAcQIEgIFwAACTAABAFzAAAHECAACBcA
+  AAkwAAQBcwAACTAABAJzAAAHJwAACTAABAJzAAAHFwAABRIAAAgXAAAJMAAEAXMAAAkwAAQCcwAA
+  BxcAAAgQIEgJQAAAB1AkTAkgAAQDUgAABkUAABAAD1gHNCRQEgMAAQkgAAQBQgAACgAPPAcQIEgI
+  FwAACTAABAFzAAAJMAAEAnMAAAcXAAAJIAAABhIAABAAD5gJIAAtEgIAAQkgAAACIQAACRAAAAES
+  AAAJIAAABhIAAAwAD7AJIAAwEgIAAQoAEBAJQAAACSAAAAYSAAALAA/wCTAAAAExAAAJIAAKBTIA
+  AAkgADABMgAACDQjAAkgAAQBQgAACSAACgQSAAAKAA+0CSAAAAZCAAALABAQCSAABAJCAAAHNCMA
+  EgMAAQoAD/AJEAAgCBcAAAkwAAQBcwAACTAABAJzAAAHFwAAEgEAAQcQIEQIFwAACTAABAFzAAAJ
+  MAAEAnMAAAcXAAAJIAAABhIAABAAEHAJIAAtEgIAAQkgAAACIQAACRAAAAESAAAJIAAABhIAAAwA
+  EIgJIAAwEgIAAQoAEOgJQAAACSAAAAYSAAALABDICTAAAAExAAAJIAAKBTIAAAkgADABMgAACDQj
+  AAkgAAQBQgAACSAACgQSAAAKABCMCSAAAAZCAAALABDoCSAABAJCAAAHNCMAEgMAAQoAEMgJEAAg
+  CBcAAAkwAAQBcwAACTAABAJzAAAHFwAAEgEAAQcQIEAIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAJ
+  IAAABhIAABAAEUgJIAAtEgIAAQkgAAACIQAACRAAAAESAAAJIAAABhIAAAwAEWAJIAAwEgIAAQoA
+  EcAJQAAACSAAAAYSAAALABGgCTAAAAExAAAJIAAKBTIAAAkgADABMgAACDQjAAkgAAQBQgAACSAA
+  CgQSAAAKABFkCSAAAAZCAAALABHACSAABAJCAAAHNCMAEgMAAQoAEaAJEAAgCBcAAAkwAAQBcwAA
+  CTAABAJzAAAHFwAAEgEAAQcQIDwIFwAACTAABAFzAAAJMAAEAnMAAAcXAAAJIAAABhIAABAAEiAJ
+  IAAtEgIAAQkgAAACIQAACRAAAAESAAAJIAAABhIAAAwAEjgJIAAwEgIAAQoAEpgJQAAACSAAAAYS
+  AAALABJ4CTAAAAExAAAJIAAKBTIAAAkgADABMgAACDQjAAkgAAQBQgAACSAACgQSAAAKABI8CSAA
+  AAZCAAALABKYCSAABAJCAAAHNCMAEgMAAQoAEngTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEgAAAEEAAAArAAAAQwAAACAA
+  AABsAAAAaQAAAG0AAABiAAAAcwAAACAAAABoAAAAaQAAAC4AAAAuAAAAbAAAAG8AAAA6AAAAIAAA
+  ABIAAABBAAAAKgAAADMAAAAgAAAAbAAAAGkAAABtAAAAYgAAAHMAAAAgAAAAaAAAAGkAAAAuAAAA
+  LgAAAGwAAABvAAAAOgAAACAAAAA=
